@@ -22,12 +22,14 @@
     SOFTWARE.
 --]]
 
+-- check out https://github.com/premake/premake-core/wiki/Tokens
+
 workspace "tutorial-callstack-tracker"
 	language "C++"
 	cppdialect "C++17"
 
     configurations { "Debug", "Release" }
-    platforms      { "x86", "x64" }
+    platforms      { "x64", "x86" }
 
     location ".build"
     flags  { "FatalCompileWarnings", "FatalLinkWarnings" }
@@ -43,37 +45,72 @@ workspace "tutorial-callstack-tracker"
 
     startproject "host"
 
-project "foo"
+-- Library that will receive the call stacks
+
+project "qcstudio"
     kind "SharedLib"
     targetdir ".out/%{cfg.platform}/%{cfg.buildcfg}"
     objdir ".tmp/%{prj.name}"
+    defines { "BUILDING_QCSTUDIO" }
 
-    files { "src/foo/*.cpp", "src/foo/*.h" }
+    files { "src/qcstudio/*" }
+
+-- Test shared libraries
+
+project "foo"
+    kind "SharedLib"
+    includedirs { "src" }
+    targetdir ".out/%{cfg.platform}/%{cfg.buildcfg}"
+    objdir ".tmp/%{prj.name}"
+    dependson { "qcstudio" }
+
+    libdirs { "%{cfg.buildtarget.directory}" }
+    links { 
+        "qcstudio.lib"
+    }
+
+    files { "src/foo/*" }
 
 project "bar"
     kind "SharedLib"
+    includedirs { "src" }
     targetdir ".out/%{cfg.platform}/%{cfg.buildcfg}"
     objdir ".tmp/%{prj.name}"
+    dependson { "qcstudio" }
 
-    files { "src/bar/*.cpp", "src/bar/*.h" }
+    libdirs { "%{cfg.buildtarget.directory}" }
+    links { 
+        "qcstudio.lib" 
+    }
+
+    files { "src/bar/*" }
+
+-- Host application that produces the data
 
 project "host"
-    dependson { "foo", "bar", ... }
     kind "ConsoleApp"
-    includedirs { "src/foo", "src/bar", "src" }
+    dependson { "foo", "bar", "baz", "qcstudio" }
+    includedirs { "src" }
+
     targetdir ".out/%{cfg.platform}/%{cfg.buildcfg}"
     objdir ".tmp/%{prj.name}"
 
-    files { "src/qcstudio/*", "src/host/*" }
+    libdirs { "%{cfg.buildtarget.directory}" }
+    links { 
+        "foo.lib", 
+        "qcstudio.lib" 
+    }
+
+    files { "src/host/*" }
 
 project "viewer"
-    dependson { "foo", "bar", ... }
+    dependson { "foo", "bar" }
     kind "ConsoleApp"
     includedirs { "src/foo", "src/bar" }
     targetdir ".out/%{cfg.platform}/%{cfg.buildcfg}"
     objdir ".tmp/%{prj.name}"
 
-    files { "src/qcstudio/*", "src/viewer/*" }
+    files { "src/viewer/*" }
 
 -- Handle Dropbox annoying sync of temporary folders
 
