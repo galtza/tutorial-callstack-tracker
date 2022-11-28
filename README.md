@@ -14,13 +14,29 @@ This tutorial describes a way to capture raw call stacks and do the translation 
 
 ## A common case
 
-Before we dive into the fast way let's briefly describe what we do when our application crashes which is the most common case.
+As I mentioned before, **the most common case** is when an exception is raised and our application cannot continue running. In this particular case, we need to access the call stack. There are mainly two ways to do so:
 
+1. By using the function ***[StackWalk64](https://learn.microsoft.com/en-us/windows/win32/api/dbghelp/nf-dbghelp-stackwalk64)***
 
+   Given a *[CONTEXT](https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-arm64_nt_context)* (for instance from the exception information as in *[EXCEPTION_POINTERS](https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-exception_pointers)* or from the function *[RtlCaptureContext](https://learn.microsoft.com/en-us/windows/win32/api/winnt/nf-winnt-rtlcapturecontext)*), this function will return information of the next entry in the call stack. Then we use the functions in [*DbgHelp*](https://learn.microsoft.com/en-us/windows/win32/api/dbghelp/) library that allow us to translate addresses into symbols, lines, etc.
+
+2. By directly accessing the call stack via ***[CaptureStackBackTrace](https://learn.microsoft.com/en-us/windows/win32/debug/capturestackbacktrace)*** 
+
+   Unlike *StackWalk64*, this retrieves up to a certain depth at once.
+
+In all cases, we need to deal with symbol library by initializing it, loading symbols and lines or even function parameters. All this has a price obviously. 
 
 ## The fast way
 
-Blah:
+The fast way is obvious, just capture entries and store that information for later resolution. 
+
+Each entry of the call stack is a memory address in the virtual space of the process. In addition, an application can be made out of several [modules](https://learn.microsoft.com/en-us/windows/win32/psapi/module-information). Each of them have their base address and a size and the code inside will always have an address within that range. In the picture, the line 123 of the file *foo.cpp* that belongs to module *mod 2*, has an address associated that respect to the process is *Abs Addr* but respect to the module it is *Rel Addr*.
+
+![](pics\pic1.png)
+
+***Rel Addr*** is what we are looking for. But, how do we know that we need 
+
+Remember that we wanted to resolve all this in a separate application? We cannot guarantee that all the modules are going to be in the same relative position once we load them again. An application can decide to load a module in different orders according to a logic that is different each time it is executed. What we need is all the addresses to have as a reference the base module address.
 
 ```c++
 namespace qcstudio::dll_tracker {
