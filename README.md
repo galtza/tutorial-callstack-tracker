@@ -32,7 +32,7 @@ The fast way is obvious, just capture entries and store that information for lat
 
 Each entry of the call stack is a memory address in the virtual space of the process. In addition, an application can be made out of several [modules](https://learn.microsoft.com/en-us/windows/win32/psapi/module-information). Each of them have their base address and a size and the code inside will always have an address within that range. In the picture, the line 123 of the file *foo.cpp* that belongs to module *mod 2*, has an address associated that respect to the process is *Abs Addr* but respect to the module it is *Rel Addr*.
 
-![](pics\pic1.png)
+![](pics/pic1.png)
 
 ***Rel Addr*** is what we are looking for. But, how do we know that we need 
 
