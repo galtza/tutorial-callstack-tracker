@@ -1,7 +1,7 @@
 /*
     MIT License
 
-    Copyright (c) 2022 RaÃºl Ramos
+    Copyright (c) 2022 Raúl Ramos
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
     of this software and associated documentation files (the "Software"), to deal
@@ -21,13 +21,15 @@
     OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
     SOFTWARE.
 */
+
 #pragma once
 
-// C++ includes
-
 #include <functional>
+#include <string>
+#include <tuple>
+#include <mutex>
 
-// #pragma warning(disable : 4251)
+#pragma warning(disable : 4251)
 #pragma push_macro("API")
 #undef API
 #if defined(BUILDING_QCSTUDIO)
@@ -36,29 +38,48 @@
 #    define API __declspec(dllimport)
 #endif
 
-// The tracker declarations
+/*
+    Simple library used to capture call-stacks and store them in a buffer
+*/
 
-namespace qcstudio::dll {
+namespace qcstudio::callstack {
 
     using namespace std;
 
-    /*
-        Callback params...
+    // Manager designed to be at global scope and initialize
 
-        bool:      true if load false if unload
-        wstring:   full path of the dll
-        wstring:   name of the dll
-        uintptr_t: base address of the dll
-        size_t:    size of the dll
-    */
+    class API tracker_t {
+    public:
+        tracker_t();
+        virtual ~tracker_t();
 
-    using callback_t = function<void(bool, const wstring&, const wstring&, uintptr_t, size_t)>;
+        enum opcodes : uint8_t {
+            callstack,   // The next data is a callstack with this format   -> |8xbytes:timestamp|2xbytes:#frames|1xbyte:void*|nxbytes:frames
+            moduleinfo,  // The next data is a module info with this format -> |8xbytes:timestamp|2xbytes:#chars|
+        };
 
-    // start / stop
+        void capture();
+        auto dump(const char* _filename) -> bool;
 
-    extern API bool start_tracking(callback_t&& _callback);
-    extern API void stop_tracking();
+    private:
+        auto write(uint8_t* _data, size_t _length) -> bool;
 
-}  // namespace qcstudio::dll
+        template<typename T>
+        auto write(const T& _data) -> bool {
+            return write((uint8_t*)&_data, sizeof(T));
+        }
+
+        auto get_timestamp() -> uint64_t;
+
+        auto enum_modules(function<void(const wstring&, uintptr_t, size_t)> _callback) -> bool;
+
+        uint8_t*   buffer_;
+        size_t     cursor_;
+        std::mutex lock_;
+    };
+
+}  // namespace qcstudio::callstack
+
+extern API qcstudio::callstack::tracker_t g_callstack_manager;
 
 #pragma pop_macro("API")

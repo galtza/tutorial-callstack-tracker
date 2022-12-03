@@ -47,7 +47,7 @@
     Receives the function that will receive the
 */
 
-namespace qcstudio::dll_tracker {
+namespace qcstudio::dll {
 
     using namespace std;
 
@@ -84,9 +84,9 @@ namespace qcstudio::dll_tracker {
 
     // The start function
 
-    bool start(callback_t&& _callback) {
+    bool start_tracking(callback_t&& _callback) {
         if (cookie) {
-            stop();
+            stop_tracking();
         }
 
         auto ntdll = LoadLibraryA("ntdll.dll");
@@ -118,4 +118,4 @@ namespace qcstudio::dll_tracker {
         cookie = nullptr;
     }
 
-}  // namespace qcstudio::dll_tracker
+}  // namespace qcstudio::dll

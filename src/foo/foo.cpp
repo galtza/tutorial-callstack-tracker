@@ -26,6 +26,10 @@
 
 #include "foo.h"
 
+// QCStudio
+
+#include "qcstudio/callstack.h"
+
 // C++
 
 #include <iostream>
@@ -34,6 +38,7 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <libloaderapi.h>
 
 // Test functions call sequence is 'foo' -> 'i' -> 'j' -> 'k')
 
@@ -46,6 +51,7 @@ void k() {
 }
 
 void j() {
+    g_callstack_manager.capture();
     k();
 }
 

@@ -22,18 +22,13 @@
     SOFTWARE.
 */
 
-// Bar include
-
 #include "bar.h"
-
-// C++ includes
-
-#include <iostream>
+#include "qcstudio/callstack.h"
 
 // Test functions call sequence is 'bar' -> 'x' -> 'y' -> 'z')
 
 void z() {
-    std::cout << "z()" << std::endl;
+    g_callstack_manager.capture();
 }
 
 void y() {
