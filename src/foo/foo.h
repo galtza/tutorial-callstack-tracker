@@ -23,4 +23,4 @@
 */
 #pragma once
 
-extern __declspec(dllexport) void foo();
+extern "C" __declspec(dllexport) void foo();
