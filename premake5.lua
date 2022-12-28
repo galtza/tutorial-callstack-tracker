@@ -104,11 +104,17 @@ project "host"
     files { "src/host/*" }
 
 project "viewer"
-    dependson { "foo", "bar" }
     kind "ConsoleApp"
-    includedirs { "src/foo", "src/bar" }
+    dependson { "qcstudio" }
+    includedirs { "src" }
+
     targetdir ".out/%{cfg.platform}/%{cfg.buildcfg}"
     objdir ".tmp/%{prj.name}"
+
+    libdirs { "%{cfg.buildtarget.directory}" }
+    links { 
+        "qcstudio.lib" 
+    }
 
     files { "src/viewer/*" }
 
