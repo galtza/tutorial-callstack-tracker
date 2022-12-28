@@ -28,7 +28,7 @@
 
 // QCStudio
 
-#include "qcstudio/callstack.h"
+#include "qcstudio/callstack-tracker.h"
 
 // C++
 
@@ -47,11 +47,26 @@ void k() {
         if (auto bar_function = (void (*)())GetProcAddress(bar_module, "bar")) {
             bar_function();
         }
+        FreeLibrary(bar_module);
     }
 }
 
 void j() {
     g_callstack_manager.capture();
+    /*
+        == Should be something similar to this ======
+
+        foo.dll!j() Line 70	C++
+        foo.dll!i() Line 75	C++
+        foo.dll!foo() Line 79	C++
+        host.exe!main() Line 67	C++
+        host.exe!invoke_main() Line 79	C++
+        host.exe!__scrt_common_main_seh() Line 288	C++
+        host.exe!__scrt_common_main() Line 331	C++
+        host.exe!mainCRTStartup(void * __formal) Line 17	C++
+        kernel32.dll!00007ffa2ace7034()	Unknown
+        ntdll.dll!00007ffa2bd626a1()	Unknown
+    */
     k();
 }
 
