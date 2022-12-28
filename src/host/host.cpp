@@ -56,86 +56,39 @@
 // Our includes
 
 #include "foo/foo.h"
-#include "qcstudio/callstack.h"
-#include "qcstudio/dll-tracker.h"
+#include "qcstudio/callstack-tracker.h"
 
 using namespace std;
 
-struct module_info {
-    uintptr_t base_addr;
-    size_t    size;
-    wstring   path;
-};
-
-enum class event_type {
-    load,
-    unload,
-    enumerate
-};
-
-struct event_t {
-    event_type type;
-    uint64_t   timestamp;  // ms since epoc
-    uintptr_t  base_addr;
-    size_t     size;
-    wstring    path;
-};
-
-auto get_timestamp() -> uint64_t {
-    return chrono::duration_cast<chrono::milliseconds>(chrono::steady_clock::now().time_since_epoch()).count();
-}
-
 auto main() -> int {
-    // Storage
+    // capture some call stacks
 
     foo();
     g_callstack_manager.capture();
+    /*
+        == Should be something similar to this ======
 
-    auto history = vector<event_t>{};
+        host.exe!main() Line 82	C++
+        host.exe!invoke_main() Line 79	C++
+        host.exe!__scrt_common_main_seh() Line 288	C++
+        host.exe!__scrt_common_main() Line 331	C++
+        host.exe!mainCRTStartup(void * __formal) Line 17	C++
+        kernel32.dll!00007ffa2ace7034()	Unknown
+        ntdll.dll!00007ffa2bd626a1()	Unknown
+    */
 
-    const auto dll_callback = [&](bool _load, const wstring& _path, const wstring& _name, uintptr_t _base_addr, size_t _size) {
-        const auto ev = _load ? event_type::load : event_type::unload;
-        history.push_back(event_t{ev, get_timestamp(), _base_addr, _size, _path});
-    };
+    // load and invoke bar module functions
 
-    const auto enum_modules_callback = [&](const wstring& _path, uintptr_t _base_addr, size_t _size) {
-        history.push_back(event_t{event_type::enumerate, get_timestamp(), _base_addr, _size, _path});
-    };
-
-    cout << "============================================================" << endl;
-    // g_callstack_manager.enum_modules(enum_modules_callback);
-    cout << "============================================================" << endl;
-
-    // qcstudio::dll_tracker::start(dll_callback);
-
-    // Invoke foo module foo function
-
-    if (auto foo_module = LoadLibrary(L"foo.dll")) {
-        if (auto foo_function = (void (*)())GetProcAddress(foo_module, "foo")) {
-            foo_function();
+    if (auto bar_module = LoadLibrary(L"bar.dll")) {
+        if (auto bar_function = (void (*)())GetProcAddress(bar_module, "bar")) {
+            bar_function();
         }
-        FreeLibrary(foo_module);
+        FreeLibrary(bar_module);
     }
 
-    if (auto foo_module = LoadLibrary(L"foo.dll")) {
-        if (auto foo_function = (void (*)())GetProcAddress(foo_module, "foo")) {
-            foo_function();
-        }
-        FreeLibrary(foo_module);
-    }
+    // dump the manager buffer
 
-    // Save history to a file
-
-    if (auto wfile = wfstream(L"data.json", ios::out | ios::binary); wfile) {
-        for (auto& entry : history) {
-            wfile << entry.timestamp;
-            wfile << "," << entry.path;
-            wfile << "," << entry.base_addr;
-            wfile << "," << entry.size;
-            wfile << "," << (int)entry.type;
-            wfile << endl;
-        }
-    }
+    g_callstack_manager.dump("callstack_data.json");
 
     return 0;
 }
