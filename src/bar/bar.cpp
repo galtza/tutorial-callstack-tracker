@@ -27,7 +27,7 @@
 
 // Test functions call sequence is 'bar' -> 'x' -> 'y' -> 'z')
 
-void z() {
+void z(const int& _i) {
     g_callstack_manager.capture();
     /*
         == Should be something similar to this ======
@@ -51,7 +51,8 @@ void z() {
 }
 
 void y() {
-    z();
+    int s = 12;
+    z(s);
 }
 
 void x() {

@@ -29,7 +29,7 @@ workspace "tutorial-callstack-tracker"
 	cppdialect "C++17"
 
     configurations { "Debug", "Release" }
-    platforms      { "x64", "x86" }
+    platforms      { "x64" }
 
     location ".build"
     flags  { "FatalCompileWarnings", "FatalLinkWarnings" }
@@ -113,7 +113,8 @@ project "viewer"
 
     libdirs { "%{cfg.buildtarget.directory}" }
     links { 
-        "qcstudio.lib" 
+        "qcstudio.lib",
+        "dbghelp"
     }
 
     files { "src/viewer/*" }

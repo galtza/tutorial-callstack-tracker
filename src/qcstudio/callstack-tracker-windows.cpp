@@ -253,7 +253,7 @@ auto qcstudio::callstack::manager_t::dump(const char* _filename) -> bool {
 }
 
 auto qcstudio::callstack::manager_t::get_timestamp() -> uint64_t {
-    return chrono::duration_cast<chrono::milliseconds>(chrono::steady_clock::now().time_since_epoch()).count();
+    return chrono::duration_cast<chrono::nanoseconds>(chrono::system_clock::now().time_since_epoch()).count();
 }
 
 void qcstudio::callstack::manager_t::on_enum_module(const wchar_t* _path, uintptr_t _base_addr, size_t _size) {
@@ -264,7 +264,7 @@ void qcstudio::callstack::manager_t::on_enum_module(const wchar_t* _path, uintpt
     write(len);
     write((uint8_t*)_path, len * sizeof(wchar_t));
     write(_base_addr);
-    write((uint16_t)_size);
+    write((uint32_t)_size);
 }
 
 void qcstudio::callstack::manager_t::on_reg_module(const wchar_t* _path, uintptr_t _base_addr, size_t _size) {
@@ -275,7 +275,7 @@ void qcstudio::callstack::manager_t::on_reg_module(const wchar_t* _path, uintptr
     write(len);
     write((uint8_t*)_path, len * sizeof(wchar_t));
     write(_base_addr);
-    write((uint16_t)_size);
+    write((uint32_t)_size);
 }
 
 void qcstudio::callstack::manager_t::on_unreg_module(const wchar_t* _path, uintptr_t _base_addr, size_t _size) {
