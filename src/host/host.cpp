@@ -1,4 +1,4 @@
-/*
+﻿/*
     MIT License
 
     Copyright (c) 2022 Raúl Ramos
@@ -55,7 +55,7 @@
 
 // Our includes
 
-#include "foo/foo.h"
+#include "foo/foo中.h"
 #include "qcstudio/callstack-tracker.h"
 
 using namespace std;

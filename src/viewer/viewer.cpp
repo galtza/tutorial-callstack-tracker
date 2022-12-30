@@ -39,6 +39,8 @@
 #include <map>
 #include <tuple>
 #include <sstream>
+#include <io.h>
+#include <fcntl.h>
 
 #undef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -53,9 +55,9 @@ using namespace qcstudio::callstack;
 
 auto start_symbol_fetching() -> bool;
 auto load_module(const std::wstring& _filepath, size_t _size) -> optional<uint64_t>;
-auto resolve(uint64_t _baseaddr, uint64_t _addroffset) -> tuple<bool, string, int, string>;
+auto resolve(uint64_t _baseaddr, uint64_t _addroffset) -> tuple<bool, wstring, int, wstring>;
 auto stop_symbol_fetching() -> bool;
-auto timestamp_string(uint64_t _ns) -> string;
+auto timestamp_string(uint64_t _ns) -> wstring;
 
 ////////////////////////////////////
 
@@ -147,6 +149,8 @@ struct module_info_t {
 // main function
 
 int main() {
+    _setmode(_fileno(stdout), _O_U8TEXT);
+
     // Range storage
 
     using addr_range_t  = pair<uintptr_t, uintptr_t>;
@@ -168,7 +172,7 @@ int main() {
             // Read the op code and timestamp
 
             if (auto [ok, op, timestamp] = read_opcode(file); ok) {
-                cout << timestamp_string(timestamp) << ": ";
+                wcout << timestamp_string(timestamp) << L": ";
 
                 // read op-custom data
 
@@ -176,7 +180,10 @@ int main() {
                     case manager_t::opcodes::system_info: {
                         if (auto [ok, flags] = read_system_info(file); ok) {
                             is_x64 = flags & manager_t::system_flags::x64;
-                            cout << ((!is_x64) ? "NO" : "") << "64 bits";
+                            if (!is_x64) {
+                                wcout << L"NO ";
+                            }
+                            wcout << L"64 bits";
                         } else {
                             keep_alive = false;
                         }
@@ -195,12 +202,12 @@ int main() {
                                     size,
                                 };
 
-                                cout << "[ ";
-                                cout << "0x" << hex << setfill('0') << setw(8) << addr_range.first << ", ";
-                                cout << "0x" << hex << setfill('0') << setw(8) << addr_range.second;
-                                cout << " ] ";
-                                wcout << filesystem::path(path).filename().wstring() << "; size = ";
-                                cout << dec << size;
+                                wcout << L"[ ";
+                                wcout << L"0x" << hex << setfill(L'0') << setw(8) << addr_range.first << "L, ";
+                                wcout << L"0x" << hex << setfill(L'0') << setw(8) << addr_range.second;
+                                wcout << L" ] ";
+                                wcout << filesystem::path(path).filename().wstring() << L"; size = ";
+                                wcout << dec << size;
                             } else {
                                 keep_alive = false;
                             }
@@ -211,19 +218,19 @@ int main() {
                     }
 
                     case qcstudio::callstack::manager_t::opcodes::callstack: {
-                        cout << "Callstack" << endl;
+                        wcout << L"Callstack" << endl;
                         for (auto addr : read_callstack(file)) {
                             if (auto it_module = loaded_modules.find({addr, addr}); it_module != loaded_modules.end()) {
                                 auto offset = addr - it_module->second.recording_base_addr;
                                 if (auto [ok, file, line, symbol] = resolve(it_module->second.actual_base_addr, offset); ok) {
                                     auto modname = filesystem::path(it_module->second.path).filename();
-                                    cout << modname << " => ";
+                                    wcout << modname << L" => ";
                                     if (file.empty()) {
-                                        cout << "unknown file/line";
+                                        wcout << L"unknown file/line";
                                     } else {
-                                        cout << file << "(" << dec << line << ")";
+                                        wcout << file << "(" << dec << line << ")";
                                     }
-                                    cout << ": " << symbol << endl;
+                                    wcout << L": " << symbol << endl;
                                 } else {
                                     keep_alive = false;
                                 }
@@ -245,7 +252,7 @@ int main() {
                     }
                 }
 
-                cout << endl;
+                wcout << endl;
             } else {
                 keep_alive = false;
             }
@@ -261,7 +268,7 @@ auto start_symbol_fetching() -> bool {
     auto options = (SymGetOptions() & ~SYMOPT_DEFERRED_LOADS)
                  | SYMOPT_LOAD_LINES
                  | SYMOPT_IGNORE_NT_SYMPATH
-                 | SYMOPT_DEBUG
+                 //| SYMOPT_DEBUG
                  | SYMOPT_UNDNAME;
     SymSetOptions(options);
 
@@ -280,39 +287,33 @@ auto load_module(const std::wstring& _filepath, size_t _size) -> optional<uint64
     return {};
 }
 
-auto resolve(uint64_t _baseaddr, uint64_t _addroffset) -> tuple<bool, string, int, string> {
-    auto unused = DWORD{};
-    auto line   = IMAGEHLP_LINE64{};
-
-    line.SizeOfStruct = sizeof(IMAGEHLP_LINEW64);
-    memset(&line, 0, line.SizeOfStruct);
-
-    struct
-    {
-        IMAGEHLP_SYMBOL ihs;
-        char            name[256];
+auto resolve(uint64_t _baseaddr, uint64_t _addroffset) -> tuple<bool, wstring, int, wstring> {
+    auto index = DWORD64{};
+    auto line  = IMAGEHLP_LINEW64{};
+    struct {
+        SYMBOL_INFOW  sym;
+        unsigned char name[256];
     } user_symbol;
-    memset(&user_symbol, 0, sizeof(user_symbol));
-    DWORD Displacement            = 0;
-    user_symbol.ihs.SizeOfStruct  = sizeof(user_symbol);
-    user_symbol.ihs.MaxNameLength = sizeof(user_symbol.name);
-    auto addr                     = _baseaddr + _addroffset;
-    auto got_line                 = SymGetLineFromAddr64(s_ref_handle, addr, &unused, &line);
-    auto got_symbol               = SymGetSymFromAddr(s_ref_handle, addr, 0, &user_symbol.ihs);
-    if (got_line || got_symbol) {
-        return {true, got_line ? string(line.FileName) : string(""), line.LineNumber, user_symbol.ihs.Name};
+    user_symbol.sym.SizeOfStruct = sizeof(user_symbol.sym);
+    user_symbol.sym.MaxNameLen   = 255;
+    auto addr                    = _baseaddr + _addroffset;
+    if (SymFromAddrW(s_ref_handle, (DWORD64)addr, &index, &user_symbol.sym)) {
+        DWORD offset      = 0;
+        line.SizeOfStruct = sizeof(line);
+        auto ok           = SymGetLineFromAddrW64(s_ref_handle, (DWORD64)addr, &offset, &line);
+        return {true, ok ? wstring(line.FileName) : wstring(), line.LineNumber, user_symbol.sym.Name};
     }
     return {false, {}, {}, {}};
 }
 
-auto timestamp_string(uint64_t _ns) -> string {
+auto timestamp_string(uint64_t _ns) -> wstring {
     auto ms    = _ns % 1'000'000;
     auto timer = system_clock::to_time_t(system_clock::time_point(milliseconds(_ns / 1'000'000)));
     auto bt    = *std::gmtime(&timer);
 
-    stringstream out;
-    out << std::put_time(&bt, "%c");  // HH:MM:SS
-    out << '.' << std::setfill('0') << std::setw(6) << ms;
+    wstringstream out;
+    out << std::put_time(&bt, L"%c");  // HH:MM:SS
+    out << L'.' << std::setfill(L'0') << std::setw(6) << ms;
     // out << '(' << _ns << ')';
     return out.str();
 }

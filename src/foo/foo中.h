@@ -1,7 +1,7 @@
-/*
+﻿/*
     MIT License
 
-    Copyright (c) 2022 Ra�l Ramos
+    Copyright (c) 2022 Raúl Ramos
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
     of this software and associated documentation files (the "Software"), to deal
@@ -21,38 +21,6 @@
     OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
     SOFTWARE.
 */
-
 #pragma once
 
-#include <functional>
-#include <string>
-#include <tuple>
-#include <mutex>
-
-/*
-    Simple library used to resolve arbitrary application
-*/
-
-namespace qcstudio::callstack {
-
-    using namespace std;
-
-    // Manager designed to be at global scope and initialize
-
-    class resolver_t {
-    public:
-        resolver_t();
-        virtual ~resolver_t();
-
-        void start();
-        auto resolve(uintptr_t _addr) -> pair<wchar_t*, unsigned>;
-        void end();
-
-    private:
-
-        uint8_t*   buffer_;
-        size_t     cursor_;
-        std::mutex lock_;
-    };
-
-}  // namespace qcstudio::callstack
+extern "C" __declspec(dllexport) void foo();
