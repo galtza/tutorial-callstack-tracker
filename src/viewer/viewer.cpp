@@ -295,7 +295,7 @@ auto resolve(uint64_t _baseaddr, uint64_t _addroffset) -> tuple<bool, wstring, i
         unsigned char name[256];
     } user_symbol;
     user_symbol.sym.SizeOfStruct = sizeof(user_symbol.sym);
-    user_symbol.sym.MaxNameLen   = 255;
+    user_symbol.sym.MaxNameLen   = sizeof(user_symbol.name);
     auto addr                    = _baseaddr + _addroffset;
     if (SymFromAddrW(s_ref_handle, (DWORD64)addr, &index, &user_symbol.sym)) {
         DWORD offset      = 0;
