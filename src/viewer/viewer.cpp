@@ -105,9 +105,9 @@ auto read_reg_module(ifstream& _file) -> tuple<bool, wstring, uint64_t, uint32_t
     return {false, {}, {}, {}};
 }
 
-// read unreg module op-code
+// read delete module op-code
 
-auto read_unreg_module(ifstream& _file) -> tuple<bool, wstring> {
+auto read_del_module(ifstream& _file) -> tuple<bool, wstring> {
     wchar_t buffer[1024];
     auto    len = read<uint16_t>(_file);
     if (len) {
@@ -167,8 +167,7 @@ int main() {
                 // read op-custom data
 
                 switch (op) {
-                    case qcstudio::callstack::manager_t::opcodes::enum_module:
-                    case qcstudio::callstack::manager_t::opcodes::reg_module: {
+                    case qcstudio::callstack::manager_t::opcodes::add_module: {
                         if (auto [ok, path, org_base_addr, size] = read_reg_module(file); ok) {
                             if (auto opt_actual_base_addr = load_module(path, size)) {
                                 const auto addr_range      = addr_range_t{org_base_addr, org_base_addr + size - 1};
@@ -218,9 +217,8 @@ int main() {
                         break;
                     }
 
-                    case qcstudio::callstack::manager_t::opcodes::unreg_module: {
-                        // TODO: Unregister the module from the local data structures
-                        if (auto [ok, path] = read_unreg_module(file); ok) {
+                    case qcstudio::callstack::manager_t::opcodes::del_module: {
+                        if (auto [ok, path] = read_del_module(file); ok) {
                             wcout << path << endl;
                         } else {
                             keep_alive = false;

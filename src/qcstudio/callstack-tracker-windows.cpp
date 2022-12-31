@@ -158,14 +158,14 @@ auto qcstudio::callstack::manager_t::start_tracking_modules() -> bool {
             if (_notification_data) {
                 switch (_reason) {
                     case LDR_DLL_NOTIFICATION_REASON_LOADED: {
-                        instance->on_reg_module(
+                        instance->on_add_module(
                             _notification_data->Loaded.FullDllName->Buffer,
                             (uintptr_t)_notification_data->Loaded.DllBase,
                             _notification_data->Loaded.SizeOfImage);
                         break;
                     }
                     case LDR_DLL_NOTIFICATION_REASON_UNLOADED: {
-                        instance->on_unreg_module(
+                        instance->on_del_module(
                             _notification_data->Loaded.FullDllName->Buffer,
                             (uintptr_t)_notification_data->Loaded.DllBase,
                             _notification_data->Loaded.SizeOfImage);
@@ -244,9 +244,9 @@ auto qcstudio::callstack::manager_t::get_timestamp() -> uint64_t {
     return chrono::duration_cast<chrono::nanoseconds>(chrono::system_clock::now().time_since_epoch()).count();
 }
 
-void qcstudio::callstack::manager_t::on_enum_module(const wchar_t* _path, uintptr_t _base_addr, size_t _size) {
+void qcstudio::callstack::manager_t::on_add_module(const wchar_t* _path, uintptr_t _base_addr, size_t _size) {
     auto guard = std::lock_guard(lock_);
-    write(opcodes::enum_module);
+    write(opcodes::add_module);
     write(get_timestamp());
     const auto len = (uint16_t)wcslen(_path);
     write(len);
@@ -255,20 +255,9 @@ void qcstudio::callstack::manager_t::on_enum_module(const wchar_t* _path, uintpt
     write((uint32_t)_size);
 }
 
-void qcstudio::callstack::manager_t::on_reg_module(const wchar_t* _path, uintptr_t _base_addr, size_t _size) {
+void qcstudio::callstack::manager_t::on_del_module(const wchar_t* _path, uintptr_t _base_addr, size_t _size) {
     auto guard = std::lock_guard(lock_);
-    write(opcodes::reg_module);
-    write(get_timestamp());
-    const auto len = (uint16_t)wcslen(_path);
-    write(len);
-    write((uint8_t*)_path, len * sizeof(wchar_t));
-    write(_base_addr);
-    write((uint32_t)_size);
-}
-
-void qcstudio::callstack::manager_t::on_unreg_module(const wchar_t* _path, uintptr_t _base_addr, size_t _size) {
-    auto guard = std::lock_guard(lock_);
-    write(opcodes::unreg_module);
+    write(opcodes::del_module);
     write(get_timestamp());
     const auto len = (uint16_t)wcslen(_path);
     write(len);
@@ -297,7 +286,7 @@ auto qcstudio::callstack::manager_t::enum_modules() -> bool {
                 auto module_info = MODULEINFO{};
                 if (GetModuleInformation(GetCurrentProcess(), module_array[i], &module_info, sizeof(module_info))) {
                     GetModuleFileNameW(module_array[i], module_path, 1024);
-                    on_enum_module(module_path, reinterpret_cast<uintptr_t>(module_info.lpBaseOfDll), module_info.SizeOfImage);
+                    on_add_module(module_path, reinterpret_cast<uintptr_t>(module_info.lpBaseOfDll), module_info.SizeOfImage);
                 } else {
                     ok = false;
                 }

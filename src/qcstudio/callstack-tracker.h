@@ -57,10 +57,9 @@ namespace qcstudio::callstack {
         // opcodes (all timestamped)
 
         enum opcodes : uint8_t {
-            enum_module = 0,  // |#chars  -> 'n'(2b)|path('n' x 2b/4b)|baseaddr(4b/8b)|size(4b)
-            reg_module,       // |#chars  -> 'n'(2b)|path('n' x 2b/4b)|baseaddr(4b/8b)|size(4b)
-            unreg_module,     // |#chars  -> 'n'(2b)|path('n' x 2b/4b)
-            callstack,        // |#frames -> 'n'(2b)|frames('n' x 4b/8b)
+            add_module = 0,  // |#chars  -> 'n'(2b)|path('n' x 2b/4b)|baseaddr(4b/8b)|size(4b)
+            del_module,      // |#chars  -> 'n'(2b)|path('n' x 2b/4b)
+            callstack,       // |#frames -> 'n'(2b)|frames('n' x 4b/8b)
         };
 
         void capture();
@@ -74,9 +73,8 @@ namespace qcstudio::callstack {
         auto get_timestamp() -> uint64_t;
         auto enum_modules() -> bool;
 
-        void on_enum_module(const wchar_t* _path, uintptr_t _base_addr, size_t _size);
-        void on_reg_module(const wchar_t* _path, uintptr_t _base_addr, size_t _size);
-        void on_unreg_module(const wchar_t* _path, uintptr_t _base_addr, size_t _size);
+        void on_add_module(const wchar_t* _path, uintptr_t _base_addr, size_t _size);
+        void on_del_module(const wchar_t* _path, uintptr_t _base_addr, size_t _size);
 
         // buffer storage
 
