@@ -54,20 +54,13 @@ namespace qcstudio::callstack {
         manager_t();
         virtual ~manager_t();
 
-        enum system_flags : uint8_t {
-            none        = 0,       //
-            x64         = 1 << 0,  // x64 platform (void* size is 8 vs 4, etc.)
-            wchar4bytes = 1 << 1,  // wchar_t size is 4 bytes, else it is 2 (utf16)
-        };
-
         // opcodes (all timestamped)
 
         enum opcodes : uint8_t {
-            system_info = 0,  // |system_flags(1b)
+            enum_module = 0,  // |#chars  -> 'n'(2b)|path('n' x 2b/4b)|baseaddr(4b/8b)|size(4b)
+            reg_module,       // |#chars  -> 'n'(2b)|path('n' x 2b/4b)|baseaddr(4b/8b)|size(4b)
+            unreg_module,     // |#chars  -> 'n'(2b)|path('n' x 2b/4b)
             callstack,        // |#frames -> 'n'(2b)|frames('n' x 4b/8b)
-            enum_module,      // |#chars -> 'n'(2b)|path('n' x 2b/4b)|baseaddr(4b/8b)|size(4b)
-            reg_module,       // |#chars -> 'n'(2b)|path('n' x 2b/4b)|baseaddr(4b/8b)|size(4b)
-            unreg_module,     // |#chars -> 'n'(2b)|path('n' x 2b/4b)
         };
 
         void capture();

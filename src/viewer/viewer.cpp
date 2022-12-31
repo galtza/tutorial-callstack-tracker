@@ -88,15 +88,6 @@ auto read_opcode(ifstream& _file) -> tuple<bool, manager_t::opcodes, uint64_t> {
     return {false, {}, {}};
 }
 
-// read system info op code
-
-auto read_system_info(ifstream& _file) -> tuple<bool, manager_t::system_flags> {
-    if (auto flags = read<manager_t::system_flags>(_file)) {
-        return {true, *flags};
-    }
-    return {false, {}};
-}
-
 // read module register/enum op-code
 
 auto read_reg_module(ifstream& _file) -> tuple<bool, wstring, uint64_t, uint32_t> {
@@ -165,7 +156,6 @@ int main() {
 
     // read the recording
 
-    auto is_x64     = false;
     auto keep_alive = true;
     if (auto file = ifstream(("callstack_data.json"), ios_base::binary | ios_base::in)) {
         while (keep_alive) {
@@ -177,19 +167,6 @@ int main() {
                 // read op-custom data
 
                 switch (op) {
-                    case manager_t::opcodes::system_info: {
-                        if (auto [ok, flags] = read_system_info(file); ok) {
-                            is_x64 = flags & manager_t::system_flags::x64;
-                            if (!is_x64) {
-                                wcout << L"NO ";
-                            }
-                            wcout << L"64 bits";
-                        } else {
-                            keep_alive = false;
-                        }
-                        break;
-                    }
-
                     case qcstudio::callstack::manager_t::opcodes::enum_module:
                     case qcstudio::callstack::manager_t::opcodes::reg_module: {
                         if (auto [ok, path, org_base_addr, size] = read_reg_module(file); ok) {

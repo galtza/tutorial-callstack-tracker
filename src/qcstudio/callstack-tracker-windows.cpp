@@ -134,18 +134,6 @@ qcstudio::callstack::manager_t::manager_t() {
     buffer_ = (uint8_t*)malloc(BUFFER_SIZE);
     cursor_ = 0;
 
-    // Store information about the system
-    write(manager_t::opcodes::system_info);
-    write(get_timestamp());
-    auto flags = uint8_t{0};
-#if defined(_WIN64)
-    flags = flags | manager_t::system_flags::x64;
-#endif
-#if !defined(_WIN32)
-    flags |= system_flags::wchar4bytes;
-#endif
-    write(flags);
-
     // Enumerate the modules and register for tracking events
 
     enum_modules();
