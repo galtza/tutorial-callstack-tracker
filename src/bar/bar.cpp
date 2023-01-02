@@ -23,12 +23,12 @@
 */
 
 #include "bar.h"
-#include "qcstudio/callstack-tracker.h"
+#include "qcstudio/callstack-recorder.h"
 
 // Test functions call sequence is 'bar' -> 'x' -> 'y' -> 'z')
 
 void z(const int& _i) {
-    g_callstack_manager.capture();
+    g_callstack_recorder.capture();
     /*
         == Should be something similar to this ======
 

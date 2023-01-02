@@ -1,8 +1,7 @@
-
-/*
+﻿/*
     MIT License
 
-    Copyright (c) 2022 Ra�l Ramos
+    Copyright (c) 2022 Raúl Ramos
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
     of this software and associated documentation files (the "Software"), to deal
@@ -23,38 +22,58 @@
     SOFTWARE.
 */
 
-#pragma once
+// Foo include
 
-// Own
+#include "foo测试.h"
 
-#include "callstack-resolver.h"
+// QCStudio
+
+#include "qcstudio/callstack-recorder.h"
 
 // C++
 
-#include <array>
-#include <vector>
 #include <iostream>
-#include <chrono>
 
-// Windows
+// Windows includes
 
-#undef WIN32_LEAN_AND_MEAN
-#undef NOMINMAX
 #define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <Windows.h>
-#include <Psapi.h>
-#include <intrin.h>
+#include <windows.h>
+#include <libloaderapi.h>
 
-using namespace std;
+// Test functions call sequence is 'foo' -> 'i' -> 'j' -> 'k')
 
-// The global manager
-
-void qcstudio::callstack::resolver_t::start() {
-    // TODO: SymInitialize, etc.
+void k() {
+    if (auto bar_module = LoadLibrary(L"bar.dll")) {
+        if (auto bar_function = (void (*)())GetProcAddress(bar_module, "bar")) {
+            bar_function();
+        }
+        FreeLibrary(bar_module);
+    }
 }
 
-void qcstudio::callstack::resolver_t::end() {
+void j() {
+    g_callstack_recorder.capture();
+    /*
+        == Should be something similar to this ======
+
+        foo.dll!j() Line 70	C++
+        foo.dll!i() Line 75	C++
+        foo.dll!foo() Line 79	C++
+        host.exe!main() Line 67	C++
+        host.exe!invoke_main() Line 79	C++
+        host.exe!__scrt_common_main_seh() Line 288	C++
+        host.exe!__scrt_common_main() Line 331	C++
+        host.exe!mainCRTStartup(void * __formal) Line 17	C++
+        kernel32.dll!00007ffa2ace7034()	Unknown
+        ntdll.dll!00007ffa2bd626a1()	Unknown
+    */
+    k();
 }
 
-// The implementation
+void i() {
+    j();
+}
+
+void foo() {
+    i();
+}

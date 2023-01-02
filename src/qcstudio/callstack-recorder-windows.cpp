@@ -1,4 +1,3 @@
-
 /*
     MIT License
 
@@ -27,11 +26,8 @@
 
 // Own
 
-#include "callstack-tracker.h"
-
-// QCStudio
-
-#include "callstack-resolver.h"
+#include "callstack-recorder.h"
+#include "dll-notification-structs.h"
 
 // C++
 
@@ -41,94 +37,18 @@
 #include <chrono>
 #include <fstream>
 
-// Windows
-
-#undef WIN32_LEAN_AND_MEAN
-#undef NOMINMAX
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <Windows.h>
-#include <Psapi.h>
-#include <intrin.h>
-#include <winternl.h>
-
-/*
-    Windows data structures and signatures
-*/
-
-// clang-format off
-
-// Windows data received as 'load' event is received (+ associated aliases)
-
-using LDR_DLL_LOADED_NOTIFICATION_DATA = struct {
-    ULONG            Flags;         // Reserved.
-    PCUNICODE_STRING FullDllName;   // The full path name of the DLL module.
-    PCUNICODE_STRING BaseDllName;   // The base file name of the DLL module.
-    PVOID            DllBase;       // A pointer to the base address for the DLL in memory.
-    ULONG            SizeOfImage;   // The size of the DLL image, in bytes.
-};
-using PLDR_DLL_LOADED_NOTIFICATION_DATA = LDR_DLL_LOADED_NOTIFICATION_DATA*;
-
-// Windows data received as 'unload' event is received (+ associated aliases)
-
-using LDR_DLL_UNLOADED_NOTIFICATION_DATA = struct {
-    ULONG            Flags;         // Reserved.
-    PCUNICODE_STRING FullDllName;   // The full path name of the DLL module.
-    PCUNICODE_STRING BaseDllName;   // The base file name of the DLL module.
-    PVOID            DllBase;       // A pointer to the base address for the DLL in memory.
-    ULONG            SizeOfImage;   // The size of the DLL image, in bytes.
-};
-using PLDR_DLL_UNLOADED_NOTIFICATION_DATA = LDR_DLL_UNLOADED_NOTIFICATION_DATA*;
-
-// Generic notification data structure for any event (notice that 'load' and 'unload' are actually the same data) + the aliases
-
-using LDR_DLL_NOTIFICATION_DATA = union {
-    LDR_DLL_LOADED_NOTIFICATION_DATA   Loaded;
-    LDR_DLL_UNLOADED_NOTIFICATION_DATA Unloaded;
-};
-using PLDR_DLL_NOTIFICATION_DATA = LDR_DLL_NOTIFICATION_DATA*;
-using PCLDR_DLL_NOTIFICATION_DATA = const LDR_DLL_NOTIFICATION_DATA*;
-
-// Signature for the notification callback
-
-using LDR_DLL_NOTIFICATION_FUNCTION = VOID NTAPI (
-  _In_     ULONG                       NotificationReason,
-  _In_     PCLDR_DLL_NOTIFICATION_DATA NotificationData,
-  _In_opt_ PVOID                       Context
-);
-using PLDR_DLL_NOTIFICATION_FUNCTION = LDR_DLL_NOTIFICATION_FUNCTION*;
-
-#define LDR_DLL_NOTIFICATION_REASON_LOADED 1
-#define LDR_DLL_NOTIFICATION_REASON_UNLOADED 2
-
-using LdrRegisterDllNotification = NTSTATUS (NTAPI*)(
-  _In_     ULONG                          Flags,
-  _In_     PLDR_DLL_NOTIFICATION_FUNCTION NotificationFunction,
-  _In_opt_ PVOID                          Context,
-  _Out_    PVOID                          *Cookie
-);
-
-using LdrUnregisterDllNotification = NTSTATUS (NTAPI*) (
-  _In_ PVOID Cookie
-);
-
-using LdrDllNotification = VOID (CALLBACK*)(
-  _In_     ULONG                       NotificationReason,
-  _In_     PCLDR_DLL_NOTIFICATION_DATA NotificationData,
-  _In_opt_ PVOID                       Context
-);
-
-// clang-format on
-
 using namespace std;
-
-// The global manager
+using namespace std::chrono;
 
 namespace {
     static constexpr auto BUFFER_SIZE = 1 * 1024 * 1024;  // this should be more than enough for this example
-}  // namespace
+}
 
-qcstudio::callstack::manager_t::manager_t() {
+/*
+    The manager
+*/
+
+qcstudio::callstack::recorder_t::recorder_t() {
     // Alloc the buffer with malloc instead of new operator
 
     buffer_ = (uint8_t*)malloc(BUFFER_SIZE);
@@ -140,7 +60,14 @@ qcstudio::callstack::manager_t::manager_t() {
     start_tracking_modules();
 }
 
-auto qcstudio::callstack::manager_t::start_tracking_modules() -> bool {
+qcstudio::callstack::recorder_t::~recorder_t() {
+    stop_tracking_modules();
+    if (buffer_) {
+        free(buffer_);
+    }
+}
+
+auto qcstudio::callstack::recorder_t::start_tracking_modules() -> bool {
     if (cookie_) {
         stop_tracking_modules();
     }
@@ -154,7 +81,7 @@ auto qcstudio::callstack::manager_t::start_tracking_modules() -> bool {
 
     LdrDllNotification internal_callback =
         [](ULONG _reason, PCLDR_DLL_NOTIFICATION_DATA _notification_data, PVOID _ctx) mutable {
-            const auto instance = (manager_t*)_ctx;
+            const auto instance = (recorder_t*)_ctx;
             if (_notification_data) {
                 switch (_reason) {
                     case LDR_DLL_NOTIFICATION_REASON_LOADED: {
@@ -192,14 +119,14 @@ auto qcstudio::callstack::manager_t::start_tracking_modules() -> bool {
     return true;
 }
 
-void qcstudio::callstack::manager_t::stop_tracking_modules() {
+void qcstudio::callstack::recorder_t::stop_tracking_modules() {
     if (cookie_ && unreg_) {
         ((LdrUnregisterDllNotification)unreg_)(cookie_);
     }
     cookie_ = nullptr;
 }
 
-auto qcstudio::callstack::manager_t::write(uint8_t* _data, size_t _length) -> bool {
+auto qcstudio::callstack::recorder_t::write(uint8_t* _data, size_t _length) -> bool {
     // check enough space
 
     if ((cursor_ + _length) >= BUFFER_SIZE) {
@@ -214,40 +141,32 @@ auto qcstudio::callstack::manager_t::write(uint8_t* _data, size_t _length) -> bo
     return true;
 }
 
-qcstudio::callstack::manager_t::~manager_t() {
-    stop_tracking_modules();
-    if (buffer_) {
-        free(buffer_);
-    }
-}
-
-void qcstudio::callstack::manager_t::capture() {
+void qcstudio::callstack::recorder_t::capture() {
     auto guard     = std::lock_guard(lock_);
     auto buffer    = array<void*, 200>{};
     auto num_addrs = RtlCaptureStackBackTrace(1, (DWORD)buffer.size(), buffer.data(), nullptr);
+    auto timestamp = duration_cast<nanoseconds>(system_clock::now().time_since_epoch()).count();
 
-    write(opcodes::callstack);
-    write(get_timestamp());
+    write(event::callstack);
+    write(timestamp);
     write((uint16_t)num_addrs);                                 // 2 bytes
     write((uint8_t*)buffer.data(), num_addrs * sizeof(void*));  // n bytes (#addrs * size_of_addr)
 }
 
-auto qcstudio::callstack::manager_t::dump(const char* _filename) -> bool {
+auto qcstudio::callstack::recorder_t::dump(const wchar_t* _filename) -> bool {
     if (auto file = std::ofstream(_filename, ios_base::binary | ios_base::out)) {
         auto guard = std::lock_guard(lock_);
         file.write((const char*)buffer_, cursor_);
+        return true;
     }
     return false;
 }
 
-auto qcstudio::callstack::manager_t::get_timestamp() -> uint64_t {
-    return chrono::duration_cast<chrono::nanoseconds>(chrono::system_clock::now().time_since_epoch()).count();
-}
-
-void qcstudio::callstack::manager_t::on_add_module(const wchar_t* _path, uintptr_t _base_addr, size_t _size) {
-    auto guard = std::lock_guard(lock_);
-    write(opcodes::add_module);
-    write(get_timestamp());
+void qcstudio::callstack::recorder_t::on_add_module(const wchar_t* _path, uintptr_t _base_addr, size_t _size) {
+    auto guard     = std::lock_guard(lock_);
+    auto timestamp = duration_cast<nanoseconds>(system_clock::now().time_since_epoch()).count();
+    write(event::add_module);
+    write(timestamp);
     const auto len = (uint16_t)wcslen(_path);
     write(len);
     write((uint8_t*)_path, len * sizeof(wchar_t));
@@ -255,16 +174,17 @@ void qcstudio::callstack::manager_t::on_add_module(const wchar_t* _path, uintptr
     write((uint32_t)_size);
 }
 
-void qcstudio::callstack::manager_t::on_del_module(const wchar_t* _path, uintptr_t _base_addr, size_t _size) {
-    auto guard = std::lock_guard(lock_);
-    write(opcodes::del_module);
-    write(get_timestamp());
+void qcstudio::callstack::recorder_t::on_del_module(const wchar_t* _path, uintptr_t _base_addr, size_t _size) {
+    auto guard     = std::lock_guard(lock_);
+    auto timestamp = duration_cast<nanoseconds>(system_clock::now().time_since_epoch()).count();
+    write(event::del_module);
+    write(timestamp);
     const auto len = (uint16_t)wcslen(_path);
     write(len);
     write((uint8_t*)_path, len * sizeof(wchar_t));
 }
 
-auto qcstudio::callstack::manager_t::enum_modules() -> bool {
+auto qcstudio::callstack::recorder_t::enum_modules() -> bool {
     // First call to get the total number of modules available
 
     auto bytes_required = DWORD{};
@@ -301,4 +221,8 @@ auto qcstudio::callstack::manager_t::enum_modules() -> bool {
     return ok;
 }
 
-qcstudio::callstack::manager_t g_callstack_manager;
+/*
+    The actual global instance of the manager
+*/
+
+qcstudio::callstack::recorder_t g_callstack_recorder;

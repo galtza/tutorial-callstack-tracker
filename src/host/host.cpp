@@ -55,8 +55,8 @@
 
 // Our includes
 
-#include "foo/foo中.h"
-#include "qcstudio/callstack-tracker.h"
+#include "foo/foo测试.h"
+#include "qcstudio/callstack-recorder.h"
 
 using namespace std;
 
@@ -64,7 +64,7 @@ auto main() -> int {
     // capture some call stacks
 
     foo();
-    g_callstack_manager.capture();
+    g_callstack_recorder.capture();
     /*
         == Should be something similar to this ======
 
@@ -88,7 +88,7 @@ auto main() -> int {
 
     // dump the manager buffer
 
-    g_callstack_manager.dump("callstack_data.json");
+    g_callstack_recorder.dump(L"callstack_data★.json");
 
     return 0;
 }

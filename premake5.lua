@@ -52,6 +52,9 @@ project "qcstudio"
     targetdir ".out/%{cfg.platform}/%{cfg.buildcfg}"
     objdir ".tmp/%{prj.name}"
     defines { "BUILDING_QCSTUDIO" }
+    links {
+        "dbghelp"
+    }
 
     files { "src/qcstudio/*" }
 

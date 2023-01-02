@@ -39,48 +39,49 @@
 #endif
 
 /*
-    Call-stack capturing library. The manager:
+    Call-stack capturing library.
+    The manager:
     - Stores module information as it is loaded/unloaded
-    - Stores the call stacks on demand
-    - Dumps all info to a file
+    - Capture the the call stacks with the minimum possible overhead and store it
+    - Dumps recorded session to a file
 */
 
 namespace qcstudio::callstack {
 
     using namespace std;
 
-    class API manager_t {
+    class API recorder_t {
     public:
-        manager_t();
-        virtual ~manager_t();
+        recorder_t();
+        virtual ~recorder_t();
 
-        // opcodes (all timestamped)
+        // events
 
-        enum opcodes : uint8_t {
-            add_module = 0,  // |#chars  -> 'n'(2b)|path('n' x 2b/4b)|baseaddr(4b/8b)|size(4b)
-            del_module,      // |#chars  -> 'n'(2b)|path('n' x 2b/4b)
-            callstack,       // |#frames -> 'n'(2b)|frames('n' x 4b/8b)
+        enum event : uint8_t {
+            add_module = 0,  // |numchars(2 bytes)|path(n x 2/4 bytes)|baseaddr(4/8 bytes)|size(4 bytes)
+            del_module,      // |numchars(2 bytes)|path(n x 2/4 bytes)
+            callstack,       // |numframes(2 bytes)|frames(n x 4/8 bytes)
         };
 
         void capture();
-        auto dump(const char* _filename) -> bool;
+        auto dump(const wchar_t* _filename) -> bool;
 
     private:
 
-        template<typename T>
-        auto write(const T& _data) -> bool;
-        auto write(uint8_t* _data, size_t _length) -> bool;
-        auto get_timestamp() -> uint64_t;
-        auto enum_modules() -> bool;
-
-        void on_add_module(const wchar_t* _path, uintptr_t _base_addr, size_t _size);
-        void on_del_module(const wchar_t* _path, uintptr_t _base_addr, size_t _size);
-
-        // buffer storage
+        // storage
 
         uint8_t*   buffer_;
         size_t     cursor_;
         std::mutex lock_;
+
+        template<typename T>
+        auto write(const T& _data) -> bool;
+        auto write(uint8_t* _data, size_t _length) -> bool;
+
+        // events
+
+        void on_add_module(const wchar_t* _path, uintptr_t _base_addr, size_t _size);
+        void on_del_module(const wchar_t* _path, uintptr_t _base_addr, size_t _size);
 
         // related to module tracking
 
@@ -88,6 +89,7 @@ namespace qcstudio::callstack {
         void* reg_    = nullptr;
         void* unreg_  = nullptr;
 
+        auto enum_modules() -> bool;
         auto start_tracking_modules() -> bool;
         void stop_tracking_modules();
     };
@@ -95,10 +97,13 @@ namespace qcstudio::callstack {
 }  // namespace qcstudio::callstack
 
 template<typename T>
-auto qcstudio::callstack::manager_t::write(const T& _data) -> bool {
+auto qcstudio::callstack::recorder_t::write(const T& _data) -> bool {
     return write((uint8_t*)&_data, sizeof(T));
 }
 
-extern API qcstudio::callstack::manager_t g_callstack_manager;
+/*
+    The actual global instance of the manager
+*/
+extern API qcstudio::callstack::recorder_t g_callstack_recorder;
 
 #pragma pop_macro("API")
