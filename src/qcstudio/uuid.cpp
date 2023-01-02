@@ -26,7 +26,7 @@
 #    error "Unknown compiler"
 #endif
 
-auto qcstudio::misc::uuid4::get_seed() -> uint64_t {
+auto qcstudio::misc::uuid::get_seed() -> uint64_t {
     using namespace std::chrono;
     const auto pid =
 #if defined(_WIN32)
@@ -41,7 +41,7 @@ auto qcstudio::misc::uuid4::get_seed() -> uint64_t {
     return llabs(((time * 181) * ((pid - 83) * 359)) % 104729);
 }
 
-qcstudio::misc::uuid4::uuid4() {
+qcstudio::misc::uuid::uuid() {
     // get low and set the variant to RFC 4122.
 
     low_ = generator_();
@@ -55,11 +55,11 @@ qcstudio::misc::uuid4::uuid4() {
     high_ |= 0x4000;
 }
 
-auto qcstudio::misc::uuid4::operator<(const uuid4& _other) const -> bool {
+auto qcstudio::misc::uuid::operator<(const uuid& _other) const -> bool {
     return high_ == low_ ? low_ < _other.low_ : high_ < _other.high_;
 }
 
-auto qcstudio::misc::uuid4::str() const -> std::string {
+auto qcstudio::misc::uuid::str() const -> std::string {
     using namespace std;
     stringstream ss;
     const auto   out = [&](int _start, int _end, uint64_t _data, bool _enddash = true) {

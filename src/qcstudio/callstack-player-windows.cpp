@@ -1,7 +1,7 @@
 ﻿/*
     MIT License
 
-    Copyright (c) 2022 Raúl Ramos
+    Copyright (c) 2023 Raúl Ramos
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
     of this software and associated documentation files (the "Software"), to deal
@@ -76,8 +76,8 @@ auto qcstudio::callstack::player_t::start(const wchar_t* _filename, const callba
     auto opt     = (old_opt & ~SYMOPT_DEFERRED_LOADS) | SYMOPT_LOAD_LINES | SYMOPT_IGNORE_NT_SYMPATH | SYMOPT_UNDNAME /*| SYMOPT_DEBUG*/;
     SymSetOptions(opt);
 
-    auto high_id = (uint32_t)crc32::from_string(misc::uuid4().str().c_str());
-    auto low_id  = (uint32_t)crc32::from_string(misc::uuid4().str().c_str());
+    auto high_id = (uint32_t)crc32::from_string(misc::uuid().str().c_str());
+    auto low_id  = (uint32_t)crc32::from_string(misc::uuid().str().c_str());
     id_          = ((uint64_t)high_id << 32) | low_id;
     if (!SymInitialize((HANDLE)id_, NULL, FALSE)) {
         return false;

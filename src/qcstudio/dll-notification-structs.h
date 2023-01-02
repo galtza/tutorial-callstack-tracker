@@ -1,5 +1,5 @@
 /*
-    Windows data structures and signatures related to dll
+    Windows data structures and signatures related to dll tracking
 */
 
 #undef WIN32_LEAN_AND_MEAN

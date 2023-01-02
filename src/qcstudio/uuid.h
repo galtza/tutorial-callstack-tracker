@@ -1,14 +1,18 @@
 #include <string>
 #include <random>
 
+/*
+    simple 'uuid' implementation
+*/
+
 namespace qcstudio::misc {
 
-    class uuid4 {
+    class uuid {
     public:
-        uuid4();
+        uuid();
 
         auto str() const -> std::string;
-        auto operator<(const uuid4& _other) const -> bool;  // required for containers
+        auto operator<(const uuid& _other) const -> bool;  // required for containers
 
     private:
         static auto get_seed() -> uint64_t;
