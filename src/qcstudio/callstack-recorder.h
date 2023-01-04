@@ -52,7 +52,6 @@ namespace qcstudio::callstack {
 
     class API recorder_t {
     public:
-        recorder_t();
         virtual ~recorder_t();
 
         // events
@@ -77,6 +76,7 @@ namespace qcstudio::callstack {
         template<typename T>
         auto write(const T& _data) -> bool;
         auto write(uint8_t* _data, size_t _length) -> bool;
+        void bootstrap();
 
         // events
 

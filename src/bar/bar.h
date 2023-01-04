@@ -1,7 +1,7 @@
-/*
+﻿/*
     MIT License
 
-    Copyright (c) 2023 Ra�l Ramos
+    Copyright (c) 2023 Raúl Ramos
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
     of this software and associated documentation files (the "Software"), to deal

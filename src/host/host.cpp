@@ -22,19 +22,6 @@
     SOFTWARE.
 */
 
-/*
-  _____     ____
- |_   _|__ |  _ \  ___
-   | |/ _ \| | | |/ _ \
-   | | (_) | |_| | (_) |
-   |_|\___/|____/ \___/
-
-    > Generate a lib for qcstudio
-    > Inside generate the object that is exported and used to send commands
-        > This will be used for dll commands, callstacks, and events in general
-    > The dlls or programs that use
-*/
-
 // C++ includes
 
 #include <iostream>
@@ -61,21 +48,10 @@
 using namespace std;
 
 auto main() -> int {
-    // capture some call stacks
+    // capture some call stacks: some inside modules calling other modules and some directly from main
 
     foo();
     g_callstack_recorder.capture();
-    /*
-        == Should be something similar to this ======
-
-        host.exe!main() Line 82	C++
-        host.exe!invoke_main() Line 79	C++
-        host.exe!__scrt_common_main_seh() Line 288	C++
-        host.exe!__scrt_common_main() Line 331	C++
-        host.exe!mainCRTStartup(void * __formal) Line 17	C++
-        kernel32.dll!00007ffa2ace7034()	Unknown
-        ntdll.dll!00007ffa2bd626a1()	Unknown
-    */
 
     // load and invoke bar module functions
 
@@ -89,6 +65,8 @@ auto main() -> int {
     // dump the manager buffer
 
     g_callstack_recorder.dump(L"callstack_data★.json");
+
+    cout << "Done!" << endl;
 
     return 0;
 }

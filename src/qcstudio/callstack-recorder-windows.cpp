@@ -48,30 +48,30 @@ namespace {
     The manager
 */
 
-qcstudio::callstack::recorder_t::recorder_t() {
-    // Alloc the buffer with malloc instead of new operator
+void qcstudio::callstack::recorder_t::bootstrap() {
+    // As the recorder recorder instance is a static variable it will be zero-initialized,
+    // hence, we can assume that nullptr means not initialized
+    // (https://en.cppreference.com/w/cpp/language/initialization#Static_initialization)
 
-    buffer_ = (uint8_t*)malloc(BUFFER_SIZE);
-    cursor_ = 0;
+    if (!buffer_) {
+        buffer_ = (uint8_t*)malloc(BUFFER_SIZE);  // make use of malloc in order to avoid potential "new operator" overrides
+        cursor_ = 0;
 
-    // Enumerate the modules and register for tracking events
+        // Enumerate the modules and register for tracking events
 
-    enum_modules();
-    start_tracking_modules();
+        enum_modules();
+        start_tracking_modules();
+    }
 }
 
 qcstudio::callstack::recorder_t::~recorder_t() {
-    stop_tracking_modules();
     if (buffer_) {
+        stop_tracking_modules();
         free(buffer_);
     }
 }
 
 auto qcstudio::callstack::recorder_t::start_tracking_modules() -> bool {
-    if (cookie_) {
-        stop_tracking_modules();
-    }
-
     auto ntdll = LoadLibraryA("ntdll.dll");
     if (!ntdll) {
         return false;
@@ -142,6 +142,8 @@ auto qcstudio::callstack::recorder_t::write(uint8_t* _data, size_t _length) -> b
 }
 
 void qcstudio::callstack::recorder_t::capture() {
+    bootstrap();
+
     auto guard     = std::lock_guard(lock_);
     auto buffer    = array<void*, 200>{};
     auto num_addrs = RtlCaptureStackBackTrace(1, (DWORD)buffer.size(), buffer.data(), nullptr);
@@ -154,10 +156,12 @@ void qcstudio::callstack::recorder_t::capture() {
 }
 
 auto qcstudio::callstack::recorder_t::dump(const wchar_t* _filename) -> bool {
-    if (auto file = std::ofstream(_filename, ios_base::binary | ios_base::out)) {
-        auto guard = std::lock_guard(lock_);
-        file.write((const char*)buffer_, cursor_);
-        return true;
+    if (buffer_) {
+        if (auto file = std::ofstream(_filename, ios_base::binary | ios_base::out)) {
+            auto guard = std::lock_guard(lock_);
+            file.write((const char*)buffer_, cursor_);
+            return true;
+        }
     }
     return false;
 }

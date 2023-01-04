@@ -57,8 +57,8 @@ namespace qcstudio::callstack {
 
     class API player_t {
     public:
-        // callback with a vector of tuples (module_name, file_name, line, symbol)
-        using callback_t = function<void(uint64_t, vector<tuple<const wchar_t*, const wchar_t*, wstring, int>>)>;
+        // callback with a vector of tuples (module_name, file_name, line, symbol, addr)
+        using callback_t = function<void(uint64_t, vector<tuple<const wchar_t*, const wchar_t*, int, wstring, uintptr_t>>)>;
 
         auto start(const wchar_t* _filename, const callback_t& _cb) -> bool;
         auto end() -> bool;
@@ -83,8 +83,8 @@ namespace qcstudio::callstack {
 
         auto load_module(const std::wstring& _filepath, size_t _size) -> optional<uint64_t>;
         auto resolve(uint64_t _baseaddr, uint64_t _addroffset) ->
-            /* (i)ok, (ii) file path, (iii)symbol, (iv)line*/
-            tuple<bool, const wchar_t*, wstring, int>;
+            /* file path, line, symbol*/
+            tuple<const wchar_t*, int, wstring>;
     };
 
 }  // namespace qcstudio::callstack

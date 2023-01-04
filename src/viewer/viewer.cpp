@@ -58,7 +58,7 @@ int main() {
 
     // Instantiate the resolver
 
-    const auto callstack_processor = [](uint64_t _timestamp, const vector<tuple<const wchar_t*, const wchar_t*, wstring, int>>& _lines) {
+    const auto callstack_processor = [](uint64_t _timestamp, const vector<tuple<const wchar_t*, const wchar_t*, int, wstring, uintptr_t>>& _lines) {
         auto ms   = _timestamp % 1'000'000;
         auto time = system_clock::to_time_t(system_clock::time_point(milliseconds(_timestamp / 1'000'000)));
         auto bt   = *gmtime(&time);
@@ -67,10 +67,14 @@ int main() {
         wcout << L'.' << setfill(L'0') << setw(6) << ms;
         wcout << L": {" << endl;
 
-        for (auto& [mod, file, sym, line] : _lines) {
+        for (auto& [mod, file, line, sym, addr] : _lines) {
             wcout << "    " << filesystem::path(mod).filename() << "! ";
-            wcout << "    " << (file ? file : L"<unknown>") << "(" << line << "): ";
-            wcout << "    " << sym << endl;
+            if (!file) {
+                wcout << hex << "0x" << addr << ": ";
+            } else {
+                wcout << (file ? file : L"<unknown>") << "(" << line << "): ";
+            }
+            wcout << sym << endl;
         }
         wcout << L"}" << endl;
     };

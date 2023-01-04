@@ -42,7 +42,7 @@
 
 // Test functions call sequence is 'foo' -> 'i' -> 'j' -> 'k')
 
-void k() {
+void foo_func_3() {
     if (auto bar_module = LoadLibrary(L"bar.dll")) {
         if (auto bar_function = (void (*)())GetProcAddress(bar_module, "bar")) {
             bar_function();
@@ -51,15 +51,15 @@ void k() {
     }
 }
 
-void j() {
+void foo_func_2() {
     g_callstack_recorder.capture();
-    k();
+    foo_func_3();
 }
 
-void i() {
-    j();
+void foo_func_1() {
+    foo_func_2();
 }
 
 void foo() {
-    i();
+    foo_func_1();
 }

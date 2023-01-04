@@ -25,19 +25,19 @@
 #include "bar.h"
 #include "qcstudio/callstack-recorder.h"
 
-void z(const int& _i) {
+void bar_func_3(const int& _i) {
     g_callstack_recorder.capture();
 }
 
-void y() {
+void bar_func_2() {
     int s = 12;
-    z(s);
+    bar_func_3(s);
 }
 
-void x() {
-    y();
+void bar_func_1() {
+    bar_func_2();
 }
 
 void bar() {
-    x();
+    bar_func_1();
 }
