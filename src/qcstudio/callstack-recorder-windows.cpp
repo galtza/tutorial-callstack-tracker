@@ -59,8 +59,8 @@ void qcstudio::callstack::recorder_t::bootstrap() {
 
         // Enumerate the modules and register for tracking events
 
-        enum_modules();
         start_tracking_modules();
+        enum_modules();
     }
 }
 
