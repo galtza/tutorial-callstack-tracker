@@ -141,7 +141,7 @@ auto qcstudio::callstack::player_t::start(const wchar_t* _filename, const callba
                     break;
                 }
                 case recorder_t::event::callstack: {
-                    auto resolved_callstack = vector<tuple<const wchar_t*, const wchar_t*, int, wstring, uintptr_t>>{};
+                    auto resolved_callstack = vector<tuple<const wchar_t*, wstring, int, wstring, uintptr_t>>{};
                     for (auto addr : read_callstack(file)) {
                         if (auto it_module = loaded_modules.find({addr, addr}); it_module != loaded_modules.end()) {
                             auto offset               = addr - it_module->second.recording_base_addr;
@@ -221,7 +221,7 @@ auto qcstudio::callstack::player_t::end() -> bool {
     return SymCleanup((HANDLE)id_);
 }
 
-auto qcstudio::callstack::player_t::resolve(uint64_t _baseaddr, uint64_t _addroffset) -> tuple<const wchar_t*, int, wstring> {
+auto qcstudio::callstack::player_t::resolve(uint64_t _baseaddr, uint64_t _addroffset) -> tuple<wstring, int, wstring> {
     auto index = DWORD64{};
     auto line  = IMAGEHLP_LINEW64{};
     struct {
@@ -235,7 +235,7 @@ auto qcstudio::callstack::player_t::resolve(uint64_t _baseaddr, uint64_t _addrof
         DWORD offset      = 0;
         line.SizeOfStruct = sizeof(line);
         auto ok           = SymGetLineFromAddrW64((HANDLE)id_, (DWORD64)addr, &offset, &line);
-        return {ok ? line.FileName : nullptr, line.LineNumber, wstring(user_symbol.sym.Name)};
+        return {ok ? line.FileName : L"", line.LineNumber, wstring(user_symbol.sym.Name)};
     }
     return {{}, {}, {}};
 }
