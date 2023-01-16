@@ -2,143 +2,166 @@
 
 # Tutorial: efficient call-stack tracking
 
->**Remember** from the [previous tutorial](https://github.com/galtza/tutorial-callstack#conclusions) that *Call Stacks* are a series of return addresses and they are used to transfer the control to/from subroutines. This is really useful for tracing the logic and behaviour of an application.
+>**Remember** from the [previous tutorial](https://github.com/galtza/tutorial-callstack#conclusions) that *Call Stacks* are basically a series of return addresses and they are used in the process of transfering the control to/from subroutines.
 
-However, there is lot of room for improvements in the way we collect and interpret this information and precisely for that reasond it might be limiting our possibilities. Sometimes we wrongly fall into believing that there is only one way to interpret a *Call Stack*.
+*Call stack*s are not only useful for debugging, they are also commonly used in other situations to provide more context. For example, when an exception occurs, *call stacks* allow us to identify the source of the crash or they can be used in assertions as well. However, the current methods for collecting and interpreting *call stack* information can be improved, as they lack performance and limit our possibilities.
 
-In this tutorial, we will be describing how to make *Call Stack* snapshots and interpret them in a way that allows us to widen our usage cases. It is **oriented to Windows**, though, but all the principles are valid for all other OS. At the end of the tutorial, there is a section that will guide us into adapting the presented techniques to **other OS**.
+In this tutorial, we will cover techniques for capturing *call stack* snapshots efficiently and interpreting them. The tutorial will **focus on Windows**, but the principles discussed can be applied to other operating systems. At the end of the tutorial, we will provide guidance on how to adapt these techniques for use on **other operating systems**.
 
 ## The crux of the matter!
 
->Also from the [Call Stack tutorial](https://github.com/galtza/tutorial-callstack#conclusions), we need to remember that “*compilers expose the correspondence between source code and assembly code*”. 
+>As we learned in the [previous tutorial on call stacks](https://github.com/galtza/tutorial-callstack#conclusions) “*Compilers can store the mapping between source code and assembly which allows us to convert any code memory address into filename/line*”. 
 
-This debug information is usually stored in the *.pdb* file associated with the *.exe* and it allows us to get the source file and the line given a memory address.
+This information is typically stored in the corresponding *.pdb* file associated with the *.exe*.
 
-As this operation can be rather costly and present some limitations that we will see later, <ins>**the crux of the whole matter**</ins> is **WHEN** to interpret the _Call Stack_.
+While it's common for applications to capture the call stack and immediately interpret each memory address using tools such as [*DbgHelp*](https://learn.microsoft.com/en-us/windows/win32/api/dbghelp/), this approach can be costly and has limitations, such as only being able to resolve addresses on one thread.
 
-Usually, applications capture the *Call Stack* and interpret the memory addresses straightaway by using the compiler-generated debugging information. This is, they use the [*DbgHelp*](https://learn.microsoft.com/en-us/windows/win32/api/dbghelp/) library to translate each address into the pair source file/line. 
+In most cases, it may be more efficient to interpret the call stack **externally**, in a separate application, as this allows for more flexibility in how the information is used.
 
-This is fine for some use cases but it can really be a real show-stopper in some others due to the **performance cost** and in some cases as well the **multi-threading limitations** of the [*DbgHelp*](https://learn.microsoft.com/en-us/windows/win32/api/dbghelp/) library.
+## The challenge
 
-So, rather than interpreting the _Call Stack_ in the host app, it is usually better to do it **via an external application**. This way, we minimise the interference in the host application.
+You might be wondering why not everyone interprets *Call Stacks* externally.
 
-## The problem
+There are technical challenges with this approach that we will be explaining and solving in this tutorial. However, one reason may be that some programmers tend to follow established practices instead of thinking critically and approaching the problem from first principles.
 
-Now, you might be asking yourself _”**why** does **not** everyone interpret Call Stacks in an external application?”_
-
-There are interesting technical challenges with this approach that we will be explaining and solving in this tutorial. However, and this is more a speculative attempt to explain the mind of programmers, there is a very human tendency to operate under imitation vs **reasoning under first principles**. 
-
-Sometimes we just accept that something is not feasible just because we have never seen anyone doing it, hence, it is reasonable to keep on doing in the old way. We are about to break that wall in this tutorial!
-
-Going back to the technical challenges, why is it more complex? Essentially it requires **tracking down** some **process-related information** in order to be able to make sense of the raw memory addresses of the *Call Stack*. But, before we continue we need to dive into how a process code is organized.
+From a technical standpoint, interpreting the Call Stack externally is more complex because it requires gathering specific information about the process in order to understand the raw memory addresses of the *Call Stack*. Before we continue, let's delve into how code is organized within a process.
 
 ## How a process code is organised
 
-As we just said, a *Call Stack* is made out of memory addresses. Those addresses point to our program code. Briefly, as this is not the aim of this tutorial: in Windows, a process is made out of at least one [module](https://learn.microsoft.com/en-us/windows/win32/psapi/module-information) (The _.exe_). Each module has associated **a memory address and a size** and every single memory address in a *Call Stack* belongs to one and only one module.
+When we capture a snapshot of the call stack, we are left with a series of memory addresses that point to different parts of our program code. In order to understand what these addresses correspond to, we need to understand how a process is organized in memory.
 
-Let's imagine a process with 4 modules: _**A**_, _**B**_, _**C**_ and _**D**_. In the picture we represent the process memory space range (*0*, *N-1*) and visually each module as a white box.
+In Windows, a process is made up of one or more [modules](https://learn.microsoft.com/en-us/windows/win32/psapi/module-information), which are typically represented by *.exe* or *.dll* files. Each module is loaded into a specific memory range, and every memory address in the call stack belongs to one of these memory ranges.
+
+For example, imagine a process with four modules: **A**, **B**, **C**, and **D**. In the picture below, we show the process memory space range and each module as a white box.
 
 ![](pics/pic1.png)
 
-In the picture, we refer to the file/line _**Foo.cpp(42)**_. This corresponds to a particular memory address inside the process (_Abs Addr_) and a relative address with respect to the module it belongs to (_Rel Addr_ with respect to _**B**_). The question now is, which address do we need to store in order to be able to reconstruct the link between the address and the file / line?
+Notice that there are gaps between modules. This is because modules can be loaded and unloaded dynamically. If we inspect the application modules offline, we will see a different module layout in memory than when the recording took place.
 
-Before we answer, notice the **gaps** between modules. This is the scenario we will find in most cases. The reason is that modules can be loaded and unloaded dynamically. If we inspect the application modules offline, that will be the scenario as well: the [*DbgHelp*](https://learn.microsoft.com/en-us/windows/win32/api/dbghelp/) library will load and unload on-demand creating a different module layout in memory.
-
-Precisely for this reason, ultimately, we need the relative addresses.
+To solve this problem, we need to store the relative addresses of the memory addresses in the call stack. This allows us to understand which module a memory address belongs to, and subsequently, which file and line it corresponds to.
 
 ## The "legacy" way
 
-Before we design the "new" system, let's take a look at how this is currently done. 
+Currently, there are two main ways to retrieve and interpret a *Call Stack*. 
 
-In order to retrieve the _Call Stack_ we can use two alternatives:
+The first method is to use the function ***[StackWalk64](https://learn.microsoft.com/en-us/windows/win32/api/dbghelp/nf-dbghelp-stackwalk64)***. This function takes in a *[CONTEXT](https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-arm64_nt_context)* (such as from the exception information in *[EXCEPTION_POINTERS](https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-exception_pointers)* or from the function *[RtlCaptureContext](https://learn.microsoft.com/en-us/windows/win32/api/winnt/nf-winnt-rtlcapturecontext)*) and returns information about the next entry in the *call stack*.
 
-1. Use the function ***[StackWalk64](https://learn.microsoft.com/en-us/windows/win32/api/dbghelp/nf-dbghelp-stackwalk64)***
+The second method is to directly access the *Call Stack* using ***[CaptureStackBackTrace](https://learn.microsoft.com/en-us/windows/win32/debug/capturestackbacktrace)***. This retrieves a certain number of entries at once, known as the depth.
 
-   Given a *[CONTEXT](https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-arm64_nt_context)* (from the exception information as in *[EXCEPTION_POINTERS](https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-exception_pointers)* or from the function *[RtlCaptureContext](https://learn.microsoft.com/en-us/windows/win32/api/winnt/nf-winnt-rtlcapturecontext)*), StackWalk64 will return information of the next entry in the _call stack_. 
+In both cases, we need to use functions from the [*DbgHelp*](https://learn.microsoft.com/en-us/windows/win32/api/dbghelp/) library such as *SymGetLineFromAddrW64* or *SymFromAddrW* to interpret the *Call Stack*.
 
-2. Directly accessing the _Call Stack_ via ***[CaptureStackBackTrace](https://learn.microsoft.com/en-us/windows/win32/debug/capturestackbacktrace)*** and then using functions such as 
+## The “new” approach
 
-   Unlike *StackWalk64*, this retrieves up to a certain number of entries (called depth) at once. 
+We have a **host** application and a **viewer** application. The host application tracks down process module’s events and captures raw _Call Stacks_ and the viewer interprets all that data.
 
-In all cases, we need to use the functions in the [*DbgHelp*](https://learn.microsoft.com/en-us/windows/win32/api/dbghelp/) library that will allow us to translate addresses into symbols, lines, etc. This functions are 
+Our new approach utilizes a separate **host** and **viewer** application. The host application tracks changes in the process modules and captures raw *Call Stacks*, while the viewer application interprets the collected data.
 
-Rather simple, uh?
+## The host
 
-## System design: let's take action!
+Before we can capture any call stacks, the host application must first undertake two important steps: (i) **begin monitoring** the load and unload events of modules, and (ii) take a snapshot of the **currently loaded modules**. Starting with module monitoring is crucial as modules can be loaded from different threads. If the snapshot were taken first, there would be a risk of losing important information. By beginning with module monitoring, the host application can ensure that it captures all relevant data.
 
-So, it is time to present the "new" system design. We will follow a very **simple principle** which is, "**minimise the computations** on the host application!". This means that if there is data that we can deduce offline we should not compute it on the host. This will allow us to increase the use cases or instances with the same performance budget.
+We have created a class named *recorder_t* which includes all necessary functionality for tracking modules, taking snapshots, and capturing call stacks. Inside this class, the function responsible for executing these two steps is called *bootstrap* and can be found in the file *callstack-recorder-windows.cpp*.
 
-In 10 steps, this is the **rough system design**:
+```c++
+void qcstudio::callstack::recorder_t::bootstrap() {
+    // As the recorder recorder instance is a static variable it will be zero-initialized,
+    // hence, we can assume that nullptr means not initialized
+    // (https://en.cppreference.com/w/cpp/language/initialization#Static_initialization)
 
-|      |           |                                                              |
-| ---- | --------- | ------------------------------------------------------------ |
-| 1    | Timestamp | All events are **timestamped**. This is required as there can be modules sharing the same address space at different times and we need to identify which one belongs to which _call stack_ |
-| 2    | Streams   | The system allows the creation of streams at any time. The streams can be anything from **files, sockets, etc** |
-| 3    | *Init*    | During **initialization**, the <u>Host</u> **scans modules** and sends descriptors to streams. The data is: _name_, _path_, _checksum_, _base address_, _size_, etc |
-| 4    | *Run*     | The <u>Host</u> tracks down all the **load module events** and sends their descriptors to the streams. (check out [this other tutorial](https://github.com/galtza/tutorial-dll-tracker) on how to track down *dll* events) |
-| 5    | Hot join  | All **module events are special** and are sent over upon a new stream. This is essential because it is used to translate absolute to relative addresses |
-| 6    | Capture   | The _Host_ captures **_call stacks_ and send them raw** to the streams. The viewer will transform it in order to extract information |
-| 7    | Viewer    | The Viewer reads and **interprets streams** according to events. Additionally, it can transform finished streams into more "cooked" content for performance reasons |
-| 8    | Database  | The module events generate a **database of module** descriptors which will be used by *Call Stack* events. |
-| 9    | Addresses | Each **_call stack_ event is transformed** to relative addresses based on the module database and added to the module identifier. |
-| 10   | Translate | Each **relative memory address along with the module identifier** can be used directly to retrieve the source file and line. |
+    if (!buffer_) {
+        buffer_ = (uint8_t*)malloc(BUFFER_SIZE);  // make use of malloc in order to avoid potential "new operator" overrides
+        cursor_ = 0;
+
+        // Enumerate the modules and register for tracking events
+
+        start_tracking_modules();
+        enum_modules();
+    }
+}
+```
+
+This function is crucial as it allows for lazy initialization of the recorder which is necessary to avoid the C++ [Static Initialization Order Fiasco](https://en.cppreference.com/w/cpp/language/siof). This function is called on every call to the *capture* function, ensuring that the recorder is properly initialized before being used.
+
+Inside the *bootstrap* function, there are the *start_tracking_modules* and *enum_modules* functions that correspond to steps (i) and (ii) mentioned earlier. The *start_tracking_modules* function is responsible for monitoring the loading and unloading of modules, and the *enum_modules* function is responsible for capturing a snapshot of the currently loaded modules.
+
+The basic principles of the *start_tracking_modules* function are explained in detail in [this tutorial](https://github.com/galtza/tutorial-dll-tracker). The *enum_modules* function makes use of the Windows function *EnumProcessModulesEx* to enumerate the modules and retrieve their information:
+
+```c++
+auto qcstudio::callstack::recorder_t::enum_modules() -> bool {
+    // First call to get the total number of modules available
+
+    auto bytes_required = DWORD{};
+    if (!EnumProcessModulesEx(GetCurrentProcess(), NULL, 0, &bytes_required, LIST_MODULES_ALL)) {
+        return false;
+    }
+
+    // Alloc space to hold all the modules
+
+    auto ok = false;
+    if (auto buffer = (LPBYTE)LocalAlloc(LMEM_FIXED | LMEM_ZEROINIT, bytes_required)) {
+        auto  module_array = (HMODULE*)buffer;
+        WCHAR module_path[1024];
+
+        ok = true;  // Assume we will succeed
+        if (EnumProcessModules(GetCurrentProcess(), module_array, bytes_required, &bytes_required)) {
+            auto num_modules = bytes_required / sizeof(HMODULE);
+            for (auto i = 0u; i < num_modules; ++i) {
+                auto module_info = MODULEINFO{};
+                if (GetModuleInformation(GetCurrentProcess(), module_array[i], &module_info, sizeof(module_info))) {
+                    GetModuleFileNameW(module_array[i], module_path, 1024);
+                    on_add_module(module_path, reinterpret_cast<uintptr_t>(module_info.lpBaseOfDll), module_info.SizeOfImage);
+                } else {
+                    ok = false;
+                }
+            }
+        } else {
+            ok = false;
+        }
+
+        LocalFree(buffer);
+    }
+
+    return ok;
+}
+```
+
+The *EnumProcessModules* function is called twice in our implementation. The first time it is used to calculate the amount of memory required to store all the module information, and the second time it is used to retrieve the actual module data. This approach allows for efficient memory management and storage of all module information.
+
+In the *on_add_module* function, we extract the relevant information for each module, including the module's file path, base address, and size. This information is crucial for later reconstructing call stack entries.
+
+Once the host application is set up, it can begin capturing *call stacks* using the function *RtlCaptureStackBackTrace*. The code for this can be seen in the function *[capture](https://github.com/galtza/tutorial-callstack-tracker/blob/main/src/qcstudio/callstack-recorder-windows.cpp#L144)* in the file *callstack-recorder-windows.cpp*:
+
+```c++
+void qcstudio::callstack::recorder_t::capture() {
+    bootstrap();
+
+    auto guard     = std::lock_guard(lock_);
+    auto buffer    = array<void*, 200>{};
+    auto num_addrs = RtlCaptureStackBackTrace(1, (DWORD)buffer.size(), buffer.data(), nullptr);
+    auto timestamp = duration_cast<nanoseconds>(system_clock::now().time_since_epoch()).count();
+
+    write(event::callstack);
+    write(timestamp);
+    write((uint16_t)num_addrs);                                 // 2 bytes
+    write((uint8_t*)buffer.data(), num_addrs * sizeof(void*));  // n bytes (#addrs * size_of_addr)
+}
+```
+
+Note that the first parameter in the call to *RtlCaptureStackBackTrace* is set to 1, which means that the first item in the stack is skipped. This is because the capturing function is usually part of the *Call Stack* and we don't want it to be included.
+
+In our example recorder, we are saving all the recorded information in a buffer, which will be written to a file at a later time, and read by the viewer application.
+
+
+
+## Viewer design
+
+
+
+
 
 ## Implementation details
 
 For (1) timestamping we can use the standard C++ [Chrono](https://en.cppreference.com/w/cpp/header/chrono) library
-
-For (2) we could implement an interface that simply allows for operator <<
-
-For (3) we need to use several Windows function like [***EnumProcessModulesEx***](https://learn.microsoft.com/en-us/windows/win32/api/psapi/nf-psapi-enumprocessmodulesex), [***GetModuleInformation()***](https://learn.microsoft.com/en-us/windows/win32/api/psapi/nf-psapi-getmoduleinformation), and [***GetModuleFileNameW***](https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-getmodulefilenamew). 
-
-The enumeration function has two working modes: one that will tell us **how many bytes** we require in order to store all the modules and the actual call that will retrieve the modules (no-Ex version).
-
-Once we have the list of modules we need to iterate and find out the base address and size and ask to retrieve the file name
-
-```c++
-// Find out the number of bytes required
-
-DWORD nbytes;
-EnumProcessModulesEx(GetCurrentProcess(), NULL, 0, &nbytes, LIST_MODULES_ALL);
-
-// Do the actual enumaration
-
-const auto pid = GetCurrentProcess();
-if (auto buffer = (LPBYTE)LocalAlloc(LMEM_FIXED | LMEM_ZEROINIT, nbytes)) {
-    auto  modules = (HMODULE*)buffer;
-    WCHAR path[1024];
-
-    ok = true;  // Assume we will succeed
-    if (EnumProcessModules(pid, modules, nbytes, &nbytes)) {
-        auto num_modules = nbytes / sizeof(HMODULE);
-        for (auto i = 0u; i < num_modules; ++i) {
-            auto nfo = MODULEINFO{};
-            if (GetModuleInformation(pid, modules[i], &nfo, sizeof(nfo))) {
-                GetModuleFileNameW(modules[i], path, 1024);
-                // Do something with name, nfo.lpBaseOfDll and nfo.SizeOfImage
-            }
-        }
-    }
-    LocalFree(buffer);
-}
-```
-
-In the "*Do something*" part,we usually want to invoke a callback and pass the information. (Checkout the file *callstack-window.cpp* in this repo for more details).
-
-This functionality is usually invoked as we start the program (even before the main function). Typically, this is done in the constructor of a extern global manager. For instance:
-
-```c++
-
-```
-
-
-
-For (4) we need to make use of the [dll tracker tutorial](https://github.com/galtza/tutorial-dll-tracker)
-
-```c++
-EnumProcessModulesEx
-```
-
 
 
 ## Other OS
