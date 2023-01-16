@@ -26,7 +26,7 @@ There are technical challenges with this approach that we will be explaining and
 
 From a technical standpoint, interpreting the Call Stack externally is more complex because it requires gathering specific information about the process in order to understand the raw memory addresses of the *Call Stack*. Before we continue, let's delve into how code is organized within a process.
 
-## How a process code is organised
+## How a process is organised
 
 When we capture a snapshot of the call stack, we are left with a series of memory addresses that point to different parts of our program code. In order to understand what these addresses correspond to, we need to understand how a process is organized in memory.
 
@@ -52,9 +52,7 @@ In both cases, we need to use functions from the [*DbgHelp*](https://learn.micro
 
 ## The “new” approach
 
-We have a **host** application and a **viewer** application. The host application tracks down process module’s events and captures raw _Call Stacks_ and the viewer interprets all that data.
-
-Our new approach utilizes a separate **host** and **viewer** application. The host application tracks changes in the process modules and captures raw *Call Stacks*, while the viewer application interprets the collected data.
+Our new approach is very simple and utilizes a separate **host** and **viewer** application. The host application tracks changes in the process modules and captures raw *Call Stacks*, while the viewer application interprets the collected data.
 
 ## The host
 
