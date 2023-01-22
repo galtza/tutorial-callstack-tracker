@@ -59,12 +59,12 @@ int main() {
     // Instantiate the resolver
 
     const auto callstack_processor = [](uint64_t _timestamp, const vector<tuple<const wchar_t*, wstring, int, wstring, uintptr_t>>& _lines) {
-        auto ms   = _timestamp % 1'000'000;
+        auto ms   = _timestamp % 1'000'000'000 / 1'000'000;
         auto time = system_clock::to_time_t(system_clock::time_point(milliseconds(_timestamp / 1'000'000)));
         auto bt   = *gmtime(&time);
 
         wcout << put_time(&bt, L"%c");
-        wcout << L'.' << setfill(L'0') << setw(6) << ms;
+        wcout << L'.' << setfill(L'0') << setw(3) << dec << ms;
         wcout << L": {" << endl;
 
         for (auto& [mod, file, line, sym, addr] : _lines) {

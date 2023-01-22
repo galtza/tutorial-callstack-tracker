@@ -324,11 +324,11 @@ Once the solution has been generated and opened in Visual Studio, the first step
 A possible output of the *viewer* could be:
 
 ```tex
-04/08/18 20:05:44.605600: {
+04/08/18 20:05:44: {
     "foo.dll"! C:\Users\555\repos\tutorial-callstack-tracker\src\foo\foo测试.cpp(56): foo_func_2
-    "foo.dll"! C:\Users\555\repos\own\tutorial-callstack-tracker\src\foo\foo测试.cpp(61): foo_func_1
-    "foo.dll"! C:\Users\555\repos\own\tutorial-callstack-tracker\src\foo\foo测试.cpp(65): foo
-    "host.exe"! C:\Users\555\repos\own\tutorial-callstack-tracker\src\host\host.cpp(45): main
+    "foo.dll"! C:\Users\555\repos\tutorial-callstack-tracker\src\foo\foo测试.cpp(61): foo_func_1
+    "foo.dll"! C:\Users\555\repos\tutorial-callstack-tracker\src\foo\foo测试.cpp(65): foo
+    "host.exe"! C:\Users\555\repos\tutorial-callstack-tracker\src\host\host.cpp(45): main
     "host.exe"! D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_common.inl(79): invoke_main
     "host.exe"! D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_common.inl(288): __scrt_common_main_seh
     "host.exe"! D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_common.inl(331): __scrt_common_main
@@ -336,16 +336,16 @@ A possible output of the *viewer* could be:
     "KERNEL32.DLL"! 0x7ffc69537614: BaseThreadInitThunk
     "ntdll.dll"! 0x7ffc6a0426a1: RtlUserThreadStart
 }
-04/08/18 20:05:51.07d9c4: {
-    "bar.dll"! C:\Users\555\repos\own\tutorial-callstack-tracker\src\bar\bar.cpp(30): bar_func_3
-    "bar.dll"! C:\Users\555\repos\own\tutorial-callstack-tracker\src\bar\bar.cpp(35): bar_func_2
-    "bar.dll"! C:\Users\555\repos\own\tutorial-callstack-tracker\src\bar\bar.cpp(39): bar_func_1
-    "bar.dll"! C:\Users\555\repos\own\tutorial-callstack-tracker\src\bar\bar.cpp(43): bar
-    "foo.dll"! C:\Users\555\repos\own\tutorial-callstack-tracker\src\foo\foo测试.cpp(50): foo_func_3
-    "foo.dll"! C:\Users\555\repos\own\tutorial-callstack-tracker\src\foo\foo测试.cpp(57): foo_func_2
-    "foo.dll"! C:\Users\555\repos\own\tutorial-callstack-tracker\src\foo\foo测试.cpp(61): foo_func_1
-    "foo.dll"! C:\Users\555\repos\own\tutorial-callstack-tracker\src\foo\foo测试.cpp(65): foo
-    "host.exe"! C:\Users\555\repos\own\tutorial-callstack-tracker\src\host\host.cpp(45): main
+04/08/18 20:05:51: {
+    "bar.dll"! C:\Users\555\repos\tutorial-callstack-tracker\src\bar\bar.cpp(30): bar_func_3
+    "bar.dll"! C:\Users\555\repos\tutorial-callstack-tracker\src\bar\bar.cpp(35): bar_func_2
+    "bar.dll"! C:\Users\555\repos\tutorial-callstack-tracker\src\bar\bar.cpp(39): bar_func_1
+    "bar.dll"! C:\Users\555\repos\tutorial-callstack-tracker\src\bar\bar.cpp(43): bar
+    "foo.dll"! C:\Users\555\repos\tutorial-callstack-tracker\src\foo\foo测试.cpp(50): foo_func_3
+    "foo.dll"! C:\Users\555\repos\tutorial-callstack-tracker\src\foo\foo测试.cpp(57): foo_func_2
+    "foo.dll"! C:\Users\555\repos\tutorial-callstack-tracker\src\foo\foo测试.cpp(61): foo_func_1
+    "foo.dll"! C:\Users\555\repos\tutorial-callstack-tracker\src\foo\foo测试.cpp(65): foo
+    "host.exe"! C:\Users\555\repos\tutorial-callstack-tracker\src\host\host.cpp(45): main
     "host.exe"! D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_common.inl(79): invoke_main
     "host.exe"! D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_common.inl(288): __scrt_common_main_seh
     "host.exe"! D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_common.inl(331): __scrt_common_main
@@ -353,8 +353,8 @@ A possible output of the *viewer* could be:
     "KERNEL32.DLL"! 0x7ffc69537614: BaseThreadInitThunk
     "ntdll.dll"! 0x7ffc6a0426a1: RtlUserThreadStart
 }
-04/08/18 20:06:00.087c44: {
-    "host.exe"! C:\Users\555\repos\own\tutorial-callstack-tracker\src\host\host.cpp(49): main
+04/08/18 20:06:00: {
+    "host.exe"! C:\Users\555\repos\tutorial-callstack-tracker\src\host\host.cpp(49): main
     "host.exe"! D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_common.inl(79): invoke_main
     "host.exe"! D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_common.inl(288): __scrt_common_main_seh
     "host.exe"! D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_common.inl(331): __scrt_common_main
@@ -362,12 +362,12 @@ A possible output of the *viewer* could be:
     "KERNEL32.DLL"! 0x7ffc69537614: BaseThreadInitThunk
     "ntdll.dll"! 0x7ffc6a0426a1: RtlUserThreadStart
 }
-04/08/18 20:06:07.0719f8: {
-    "bar.dll"! C:\Users\555\repos\own\tutorial-callstack-tracker\src\bar\bar.cpp(30): bar_func_3
-    "bar.dll"! C:\Users\555\repos\own\tutorial-callstack-tracker\src\bar\bar.cpp(35): bar_func_2
-    "bar.dll"! C:\Users\555\repos\own\tutorial-callstack-tracker\src\bar\bar.cpp(39): bar_func_1
-    "bar.dll"! C:\Users\555\repos\own\tutorial-callstack-tracker\src\bar\bar.cpp(43): bar
-    "host.exe"! C:\Users\555\repos\own\tutorial-callstack-tracker\src\host\host.cpp(53): main
+04/08/18 20:06:07: {
+    "bar.dll"! C:\Users\555\repos\tutorial-callstack-tracker\src\bar\bar.cpp(30): bar_func_3
+    "bar.dll"! C:\Users\555\repos\tutorial-callstack-tracker\src\bar\bar.cpp(35): bar_func_2
+    "bar.dll"! C:\Users\555\repos\tutorial-callstack-tracker\src\bar\bar.cpp(39): bar_func_1
+    "bar.dll"! C:\Users\555\repos\tutorial-callstack-tracker\src\bar\bar.cpp(43): bar
+    "host.exe"! C:\Users\555\repos\tutorial-callstack-tracker\src\host\host.cpp(53): main
     "host.exe"! D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_common.inl(79): invoke_main
     "host.exe"! D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_common.inl(288): __scrt_common_main_seh
     "host.exe"! D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_common.inl(331): __scrt_common_main
