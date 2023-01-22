@@ -1,7 +1,7 @@
 ﻿/*
     MIT License
 
-    Copyright (c) 2023 Raúl Ramos
+    Copyright (c) 2017-2023 Raúl Ramos
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
     of this software and associated documentation files (the "Software"), to deal
@@ -40,12 +40,12 @@
 #include <windows.h>
 #include <libloaderapi.h>
 
-// Test functions call sequence is 'foo' -> 'i' -> 'j' -> 'k')
+// Test functions that call to ech other in a sequence
 
 void foo_func_3() {
     if (auto bar_module = LoadLibrary(L"bar.dll")) {
         if (auto bar_function = (void (*)())GetProcAddress(bar_module, "bar")) {
-            bar_function();
+            bar_function();  // There is another 'capture' call inside this so we can test multiple modules in the callstack
         }
         FreeLibrary(bar_module);
     }

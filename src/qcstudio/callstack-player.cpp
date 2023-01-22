@@ -1,7 +1,7 @@
 ﻿/*
     MIT License
 
-    Copyright (c) 2023 Raúl Ramos
+    Copyright (c) 2017-2023 Raúl Ramos
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
     of this software and associated documentation files (the "Software"), to deal
@@ -38,6 +38,7 @@
 #include <fstream>
 #include <chrono>
 #include <map>
+#include <set>
 #include <iomanip>
 #include <filesystem>
 
@@ -73,12 +74,16 @@ auto qcstudio::callstack::player_t::start(const wchar_t* _filename, const callba
         Generate a random id to be used on evary Sym* call
     */
     auto old_opt = SymGetOptions();
-    auto opt     = (old_opt & ~SYMOPT_DEFERRED_LOADS) | SYMOPT_LOAD_LINES | SYMOPT_IGNORE_NT_SYMPATH | SYMOPT_UNDNAME /*| SYMOPT_DEBUG*/;
+    auto opt =
+        (old_opt & ~SYMOPT_DEFERRED_LOADS)  // We want to remove this option as we want the symbols to load as we load the module
+        | SYMOPT_LOAD_LINES                 // We will be needing the source lines
+        | SYMOPT_IGNORE_NT_SYMPATH          // Ignore environment variable _NT_SYMBOL_PATH and use
+        | SYMOPT_UNDNAME                    // We want human readable non-decorated names
+        /* | SYMOPT_DEBUG */
+        ;
     SymSetOptions(opt);
 
-    auto high_id = (uint32_t)crc32::from_string(misc::uuid().str().c_str());
-    auto low_id  = (uint32_t)crc32::from_string(misc::uuid().str().c_str());
-    id_          = ((uint64_t)high_id << 32) | low_id;
+    id_ = generate_id();
     if (!SymInitialize((HANDLE)id_, NULL, FALSE)) {
         return false;
     }
@@ -143,6 +148,8 @@ auto qcstudio::callstack::player_t::start(const wchar_t* _filename, const callba
                 case recorder_t::event::callstack: {
                     auto resolved_callstack = vector<tuple<const wchar_t*, wstring, int, wstring, uintptr_t>>{};
                     for (auto addr : read_callstack(file)) {
+                        // clang-format off
+                        // clang-format on
                         if (auto it_module = loaded_modules.find({addr, addr}); it_module != loaded_modules.end()) {
                             auto offset               = addr - it_module->second.recording_base_addr;
                             auto [file, line, symbol] = resolve(it_module->second.actual_base_addr, offset);
@@ -238,4 +245,10 @@ auto qcstudio::callstack::player_t::resolve(uint64_t _baseaddr, uint64_t _addrof
         return {ok ? line.FileName : L"", line.LineNumber, wstring(user_symbol.sym.Name)};
     }
     return {{}, {}, {}};
+}
+
+auto qcstudio::callstack::player_t::generate_id() const -> uint64_t {
+    const auto high_id = (uint32_t)crc32::from_string(misc::uuid().str().c_str());
+    const auto low_id  = (uint32_t)crc32::from_string(misc::uuid().str().c_str());
+    return ((uint64_t)high_id << 32) | low_id;
 }

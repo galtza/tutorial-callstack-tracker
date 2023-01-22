@@ -1,7 +1,7 @@
 /*
     MIT License
 
-    Copyright (c) 2023 Raúl Ramos
+    Copyright (c) 2017-2023 Raúl Ramos
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
     of this software and associated documentation files (the "Software"), to deal
@@ -24,18 +24,15 @@
 
 #pragma once
 
-#include <functional>
-#include <string>
-#include <tuple>
 #include <mutex>
 
 #pragma warning(disable : 4251)
-#pragma push_macro("API")
-#undef API
+#pragma push_macro("QCS_API")
+#undef QCS_API
 #if defined(BUILDING_QCSTUDIO)
-#    define API __declspec(dllexport)
+#    define QCS_API __declspec(dllexport)
 #else
-#    define API __declspec(dllimport)
+#    define QCS_API __declspec(dllimport)
 #endif
 
 /*
@@ -50,7 +47,7 @@ namespace qcstudio::callstack {
 
     using namespace std;
 
-    class API recorder_t {
+    class QCS_API recorder_t {
     public:
         virtual ~recorder_t();
 
@@ -104,6 +101,7 @@ auto qcstudio::callstack::recorder_t::write(const T& _data) -> bool {
 /*
     The actual global instance of the manager
 */
-extern API qcstudio::callstack::recorder_t g_callstack_recorder;
 
-#pragma pop_macro("API")
+extern QCS_API qcstudio::callstack::recorder_t g_callstack_recorder;
+
+#pragma pop_macro("QCS_API")

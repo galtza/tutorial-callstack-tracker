@@ -1,7 +1,7 @@
 /*
     MIT License
 
-    Copyright (c) 2023 Raúl Ramos
+    Copyright (c) 2017-2023 Raúl Ramos
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
     of this software and associated documentation files (the "Software"), to deal
@@ -50,7 +50,7 @@ namespace {
 
 void qcstudio::callstack::recorder_t::bootstrap() {
     // As the recorder recorder instance is a static variable it will be zero-initialized,
-    // hence, we can assume that nullptr means not initialized
+    // hence, we can safely assume that nullptr means not initialized
     // (https://en.cppreference.com/w/cpp/language/initialization#Static_initialization)
 
     if (!buffer_) {

@@ -1,7 +1,7 @@
 ﻿/*
     MIT License
 
-    Copyright (c) 2023 Raúl Ramos
+    Copyright (c) 2017-2023 Raúl Ramos
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
     of this software and associated documentation files (the "Software"), to deal
@@ -25,20 +25,11 @@
 // C++ includes
 
 #include <iostream>
-#include <iomanip>
-#include <functional>
-#include <vector>
-#include <chrono>
-#include <fstream>
 
 // Windows includes
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-#include <minwindef.h>
-#include <winnt.h>
-#include <subauth.h>
-#include <libloaderapi.h>
 
 // Our includes
 

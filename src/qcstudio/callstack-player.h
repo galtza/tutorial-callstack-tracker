@@ -1,7 +1,7 @@
 /*
     MIT License
 
-    Copyright (c) 2023 Raúl Ramos
+    Copyright (c) 2017-2023 Raúl Ramos
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
     of this software and associated documentation files (the "Software"), to deal
@@ -37,12 +37,12 @@
 #include <optional>
 
 #pragma warning(disable : 4251)
-#pragma push_macro("API")
-#undef API
+#pragma push_macro("QCS_API")
+#undef QCS_API
 #if defined(BUILDING_QCSTUDIO)
-#    define API __declspec(dllexport)
+#    define QCS_API __declspec(dllexport)
 #else
-#    define API __declspec(dllimport)
+#    define QCS_API __declspec(dllimport)
 #endif
 
 /*
@@ -55,7 +55,7 @@ namespace qcstudio::callstack {
 
     // Manager designed to be at global scope and initialize
 
-    class API player_t {
+    class QCS_API player_t {
     public:
         // callback with a vector of tuples (module_name, file_name, line, symbol, addr)
         using callback_t = function<void(uint64_t, vector<tuple<const wchar_t*, wstring, int, wstring, uintptr_t>>)>;
@@ -85,6 +85,10 @@ namespace qcstudio::callstack {
         auto resolve(uint64_t _baseaddr, uint64_t _addroffset) ->
             /* file path, line, symbol*/
             tuple<wstring, int, wstring>;
+
+        // utils
+
+        auto generate_id() const -> uint64_t;
     };
 
 }  // namespace qcstudio::callstack
