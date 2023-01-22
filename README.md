@@ -375,7 +375,6 @@ A possible output of the *viewer* could be:
     "KERNEL32.DLL"! 0x7ffc69537614: BaseThreadInitThunk
     "ntdll.dll"! 0x7ffc6a0426a1: RtlUserThreadStart
 }
-
 ```
 
 
