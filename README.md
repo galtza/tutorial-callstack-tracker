@@ -34,13 +34,13 @@ A process is composed of several modules, also referred to as shared libraries o
 
 For example, imagine a situation where a process has 4 loaded modules: **A**, **B**, **C**, and **D**. The illustration below depicts the process memory space range from *0* to *n-1* along with the arbitrary absolute addresses **X** and **Y** represented by the green dots.
 
-![](pics/pic5.png)
+![](pics/modules.png)
 
 The modules within a process may not be arranged in a contiguous memory layout, as demonstrated by the dashed area in the illustration. This is a result of their dynamic nature; a module can be loaded and unloaded multiple times during the lifecycle of a process.
 
 In this specific example, the three modules **A**, **B** and **C** could have been loaded in a way that they are arranged sequentially in the memory. At a specific time **t<sub>0</sub>** we captured a call stack that includes an absolute address **X**. At this precise time, **X** belongs to the memory range of module **B**.
 
-![](pics/tl.png)
+![](pics/timeline.png)
 
 At a later time, **t<sub>1</sub>**, the process unloads module **B** and at **t<sub>2</sub>**, it loads module **D** in the same location where **B** used to reside. We then capture another call stack that includes the same **X** absolute address. However, this time, the new address no longer belongs to module **B**; it now belongs to module **D**.
 
@@ -318,6 +318,8 @@ In addition to the previously mentioned functions, there are other functions tha
 To test this repository, you will need **premake5** and **VS2019**. The Visual Studio version can be easily changed by editing the *generate.bat* file. The solution files are located in the `.build` folder, temporary files can be found in `.tmp`, and the output binary files are located in `.out`.
 
 Once the solution has been generated and opened in Visual Studio, the first step is to run the *host* command line project, which will generate the event data. If successful, it will display the message "Done!". Next, execute the *viewer* project to interpret the recorded events and display the results.
+
+![](pics/solution.png)
 
 A possible output of the *viewer* could be:
 
