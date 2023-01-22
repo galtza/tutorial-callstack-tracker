@@ -30,15 +30,19 @@ From a technical standpoint, interpreting the Call Stack externally is more comp
 
 When we capture a snapshot of the call stack, we are left with a series of memory addresses that point to different parts of our program code. In order to understand what these addresses correspond to, we need to understand how a process is organized in memory.
 
-In Windows, a process is made up of one or more [modules](https://learn.microsoft.com/en-us/windows/win32/psapi/module-information), which are typically represented by *.exe* or *.dll* files. Each module is loaded into a specific memory range, and every memory address in the call stack belongs to one of these memory ranges.
+A process is made up of several modules, which are also known as shared libraries or dynamic-link libraries. These modules contain code and data that are used by the process, and are mapped into the process's virtual memory space at a specific range. In Windows modules are typically represented by *.exe* or *.dll* files. Every memory address in our call stack belongs to one of these memory ranges.
 
 For example, imagine a process with four modules: **A**, **B**, **C**, and **D**. In the picture below, we show the process memory space range and each module as a white box.
 
-![](pics/pic1.png)
+<img align="left" src="pics/pic5.png">
 
-Notice that there are gaps between modules. This is because modules can be loaded and unloaded dynamically. If we inspect the application modules offline, we will see a different module layout in memory than when the recording took place.
+<img align="right" src="pics/timeline.png">
 
-To solve this problem, we need to store the relative addresses of the memory addresses in the call stack. This allows us to understand which module a memory address belongs to, and subsequently, which file and line it corresponds to.
+The modules within a process may not be arranged in sequential memory locations, as indicated by the gaps between modules in the diagram. This is due to the dynamic nature of the modules; for instance, a module like **B** can be unloaded and replaced with another module **B'** that partially overlaps the same memory range. What is more, module **B** could be loaded and unloaded multiple times and there is no guarantee that it will be loaded at the same memory addresses.
+
+This highlights the fact that we cannot rely on absolute addresses and must instead use relative addresses and timing when tracking events.
+
+<br clear="right"/>
 
 ## The "legacy" way
 
@@ -52,13 +56,13 @@ In both cases, we need to use functions from the [*DbgHelp*](https://learn.micro
 
 ## The “new” approach
 
-Our new approach is very simple and utilizes a separate **host** and **viewer** application. The host application tracks changes in the process modules and captures raw *Call Stacks*, while the viewer application interprets the collected data.
+Our new approach is straightforward and employs a distinct **host** and **viewer** application. The host application monitors changes in the process modules and records raw *Call Stacks*, while the viewer application interprets the gathered data. Our goal is to minimize intrusion, thus keeping the performance impact on the **host** to a minimum.
 
-## The host
+## The Host
 
 Before we can capture any call stacks, the host application must first undertake two important steps: (i) **begin monitoring** the load and unload events of modules, and (ii) take a snapshot of the **currently loaded modules**. Starting with module monitoring is crucial as modules can be loaded from different threads. If the snapshot were taken first, there would be a risk of losing important information. By beginning with module monitoring, the host application can ensure that it captures all relevant data.
 
-We have created a class named *recorder_t* which includes all necessary functionality for tracking modules, taking snapshots, and capturing call stacks. Inside this class, the function responsible for executing these two steps is called *bootstrap* and can be found in the file *callstack-recorder-windows.cpp*.
+We have created a class named *recorder_t* which includes all necessary functionality for tracking modules, taking snapshots, and capturing call stacks. Inside this class, the function responsible for executing these two steps is called *bootstrap* and can be found in the file *callstack-recorder.cpp*.
 
 ```c++
 void qcstudio::callstack::recorder_t::bootstrap() {
@@ -78,7 +82,7 @@ void qcstudio::callstack::recorder_t::bootstrap() {
 }
 ```
 
-This function is crucial as it allows for lazy initialization of the recorder which is necessary to avoid the C++ [Static Initialization Order Fiasco](https://en.cppreference.com/w/cpp/language/siof). This function is called on every call to the *capture* function, ensuring that the recorder is properly initialized before being used.
+This function is crucial as it allows for lazy initialization of the recorder which is necessary to avoid the C++ [Static Initialization Order Fiasco](https://en.cppreference.com/w/cpp/language/siof). This function is invoked every time we call the *capture* function, ensuring that the recorder is properly initialized before being used.
 
 Inside the *bootstrap* function, there are the *start_tracking_modules* and *enum_modules* functions that correspond to steps (i) and (ii) mentioned earlier. The *start_tracking_modules* function is responsible for monitoring the loading and unloading of modules, and the *enum_modules* function is responsible for capturing a snapshot of the currently loaded modules.
 
@@ -149,11 +153,9 @@ Note that the first parameter in the call to *RtlCaptureStackBackTrace* is set t
 
 In our example recorder, we are saving all the recorded information in a buffer, which will be written to a file at a later time, and read by the viewer application.
 
+## The Viewer
 
-
-## Viewer design
-
-
+The viewer must utilise all the information gathered from the **host** to reconstruct the precise conditions in which the *Call Stack* was recorded. Only in that way we will be able to reconstruct the symbols. So, basically, is like if we would replay the series of events 
 
 
 
@@ -165,6 +167,10 @@ For (1) timestamping we can use the standard C++ [Chrono](https://en.cppreferenc
 ## Other OS
 
 asd
+
+In linux there is no notification per se
+
+we can watch /proc/pid/maps where it is decribed each dynamic library memory regions
 
 ## Conclusions
 
