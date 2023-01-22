@@ -51,9 +51,9 @@ At a later time **t<sub>1</sub>**, the process unloads module **B** and then at 
 <img align="left" src="pics/t2.png">
 <br clear="left"/>
 
-We then capture another *Call Stack* that includes the same **X** absolute address <sub>**(2)**</sub>. Only that the new address does not belong to module **B**. It now belongs to module **D**. 
+We then capture another Call Stack that includes the same **X** absolute address <sub>**(2)**</sub>. However, the new address no longer belongs to module **B**, but now belongs to module **D**.
 
-Finally, at **t<sub>3</sub>** the old **B** module is loaded again but now in a different address. We then capture another *Call Stack* **<sub>(3)</sub>**, however, the address is no longer **X**.
+Lastly, at **t<sub>3</sub>**, the original **B** module is reloaded but at a different address. We capture yet another *Call Stack* **<sub>(3)</sub>**, but this time the address is no longer **X**.
 
 <img align="left" src="pics/t3.png">
 <br clear="left"/>
