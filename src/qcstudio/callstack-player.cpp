@@ -75,10 +75,10 @@ auto qcstudio::callstack::player_t::start(const wchar_t* _filename, const callba
     */
     auto old_opt = SymGetOptions();
     auto opt =
-        (old_opt & ~SYMOPT_DEFERRED_LOADS)  // We want to remove this option as we want the symbols to load as we load the module
+        (old_opt & ~SYMOPT_DEFERRED_LOADS)  // Load symbols as we load the module
         | SYMOPT_LOAD_LINES                 // We will be needing the source lines
-        | SYMOPT_IGNORE_NT_SYMPATH          // Ignore environment variable _NT_SYMBOL_PATH and use
-        | SYMOPT_UNDNAME                    // We want human readable non-decorated names
+        | SYMOPT_IGNORE_NT_SYMPATH          // Ignore _NT_SYMBOL_PATH
+        | SYMOPT_UNDNAME                    // Human readable non-decorated names
         /* | SYMOPT_DEBUG */
         ;
     SymSetOptions(opt);
@@ -105,11 +105,11 @@ auto qcstudio::callstack::player_t::start(const wchar_t* _filename, const callba
         size_t    size;
     };
 
-    using addr_range_t  = pair<uintptr_t, uintptr_t>;
-    auto range_comparer = [](const addr_range_t& _left, const addr_range_t& _right) {
+    using range_t = pair<uintptr_t, uintptr_t>;
+    auto cmp      = [](const range_t& _left, const range_t& _right) {
         return _left.second < _right.first;
     };
-    auto loaded_modules = map<addr_range_t, module_info_t, decltype(range_comparer)>(range_comparer);
+    auto loaded_modules = map<range_t, module_info_t, decltype(cmp)>(cmp);
     auto ok             = true;
     while (ok) {
         if (auto [event_ok, event, timestamp] = read_event(file); event_ok) {
@@ -117,7 +117,7 @@ auto qcstudio::callstack::player_t::start(const wchar_t* _filename, const callba
                 case recorder_t::event::add_module: {
                     if (auto [ok, path, org_base_addr, size] = read_add_module(file); ok) {
                         if (auto opt_actual_base_addr = load_module(path, size)) {
-                            const auto addr_range      = addr_range_t{org_base_addr, org_base_addr + size - 1};
+                            const auto addr_range      = range_t{org_base_addr, org_base_addr + size - 1};
                             loaded_modules[addr_range] = module_info_t{
                                 path,
                                 org_base_addr,
@@ -147,15 +147,14 @@ auto qcstudio::callstack::player_t::start(const wchar_t* _filename, const callba
                 }
                 case recorder_t::event::callstack: {
                     auto resolved_callstack = vector<tuple<const wchar_t*, wstring, int, wstring, uintptr_t>>{};
-                    for (auto addr : read_callstack(file)) {
-                        // clang-format off
-                        // clang-format on
-                        if (auto it_module = loaded_modules.find({addr, addr}); it_module != loaded_modules.end()) {
-                            auto offset               = addr - it_module->second.recording_base_addr;
+                    for (auto abs_addr : read_callstack(file)) {
+                        const auto endit = loaded_modules.end();
+                        if (auto it_module = loaded_modules.find({abs_addr, abs_addr}); it_module != endit) {
+                            auto offset               = abs_addr - it_module->second.recording_base_addr;
                             auto [file, line, symbol] = resolve(it_module->second.actual_base_addr, offset);
-                            resolved_callstack.emplace_back(it_module->second.path.c_str(), file, line, symbol, (uintptr_t)addr);
+                            resolved_callstack.emplace_back(it_module->second.path.c_str(), file, line, symbol, (uintptr_t)abs_addr);
                         } else {
-                            resolved_callstack.emplace_back(L"", nullptr, -1, wstring{}, (uintptr_t)addr);
+                            resolved_callstack.emplace_back(L"", nullptr, -1, wstring{}, (uintptr_t)abs_addr);
                         }
                     }
                     if (ok) {
@@ -178,35 +177,41 @@ auto qcstudio::callstack::player_t::read_event(ifstream& _file) -> tuple<bool, q
     if (op && t) {
         return {true, *op, *t};
     }
-    return {false, {}, {}};
+    return {};
 }
 
-auto qcstudio::callstack::player_t::read_add_module(ifstream& _file) -> tuple<bool, wstring, uint64_t, uint32_t> {
-    wchar_t buffer[1024];
+auto qcstudio::callstack::player_t::read_add_module(ifstream& _file)
+    -> tuple<bool, wstring, uint64_t, uint32_t> {
+    auto buffer = array<wchar_t, 1024>{};
     if (auto opt_len = read<uint16_t>(_file)) {
-        if (_file.read((char*)buffer, *opt_len * sizeof(wchar_t))) {
+        if (_file.read((char*)buffer.data(), *opt_len * sizeof(wchar_t))) {
             auto opt_base_ptr = read<uintptr_t>(_file);
             auto opt_size     = read<uint32_t>(_file);
             if (opt_base_ptr && opt_size) {
-                return {true, wstring(buffer, *opt_len), *opt_base_ptr, *opt_size};
+                return {
+                    true, wstring(buffer.data(), *opt_len),
+                    *opt_base_ptr,
+                    *opt_size};
             }
         }
     }
-    return {false, {}, {}, {}};
+    return {};
 }
 
-auto qcstudio::callstack::player_t::read_del_module(ifstream& _file) -> tuple<bool, wstring> {
-    wchar_t buffer[1024];
+auto qcstudio::callstack::player_t::read_del_module(ifstream& _file)
+    -> tuple<bool, wstring> {
+    auto buffer = array<wchar_t, 1024>{};
     if (auto opt_len = read<uint16_t>(_file)) {
-        if (_file.read((char*)buffer, *opt_len * sizeof(wchar_t))) {
-            return {true, wstring(buffer, *opt_len)};
+        if (_file.read((char*)buffer.data(), *opt_len * sizeof(wchar_t))) {
+            return {true, wstring(buffer.data(), *opt_len)};
         }
     }
-    return {false, {}};
+    return {};
 }
 
-auto qcstudio::callstack::player_t::read_callstack(ifstream& _file) -> vector<uintptr_t> {
-    vector<uintptr_t> ret;
+auto qcstudio::callstack::player_t::read_callstack(ifstream& _file)
+    -> vector<uintptr_t> {
+    auto ret = vector<uintptr_t>{};
     if (auto num = read<uint16_t>(_file)) {
         ret.resize(*num);
         if (_file.read((char*)ret.data(), *num * sizeof(uintptr_t))) {
@@ -228,23 +233,27 @@ auto qcstudio::callstack::player_t::end() -> bool {
     return SymCleanup((HANDLE)id_);
 }
 
-auto qcstudio::callstack::player_t::resolve(uint64_t _baseaddr, uint64_t _addroffset) -> tuple<wstring, int, wstring> {
+auto qcstudio::callstack::player_t::resolve(uint64_t _baseaddr, uint64_t _addroffset)
+    -> tuple<wstring, int, wstring> {
     auto index = DWORD64{};
-    auto line  = IMAGEHLP_LINEW64{};
     struct {
         SYMBOL_INFOW  sym;
         unsigned char name[256];
     } user_symbol;
     user_symbol.sym.SizeOfStruct = sizeof(user_symbol.sym);
     user_symbol.sym.MaxNameLen   = sizeof(user_symbol.name);
-    auto addr                    = _baseaddr + _addroffset;
-    if (SymFromAddrW((HANDLE)id_, (DWORD64)addr, &index, &user_symbol.sym)) {
-        DWORD offset      = 0;
+    auto addr                    = (DWORD64)(_baseaddr + _addroffset);
+    if (SymFromAddrW((HANDLE)id_, addr, &index, &user_symbol.sym)) {
+        auto line         = IMAGEHLP_LINEW64{};
+        auto offset       = DWORD{0};
         line.SizeOfStruct = sizeof(line);
-        auto ok           = SymGetLineFromAddrW64((HANDLE)id_, (DWORD64)addr, &offset, &line);
-        return {ok ? line.FileName : L"", line.LineNumber, wstring(user_symbol.sym.Name)};
+        if (SymGetLineFromAddrW64((HANDLE)id_, addr, &offset, &line)) {
+            return {line.FileName, line.LineNumber, wstring(user_symbol.sym.Name)};
+        } else {
+            return {L"", -1, wstring(user_symbol.sym.Name)};
+        }
     }
-    return {{}, {}, {}};
+    return {};
 }
 
 auto qcstudio::callstack::player_t::generate_id() const -> uint64_t {
