@@ -34,29 +34,24 @@ A process is made up of several modules, which are also known as shared librarie
 
 For example, imagine a situation where a process has 4 modules loaded: **A**, **B**, **C**, and **D**. In the picture below, we show the process memory space range and each module as a white box. 
 
-<img align="left" src="pics/pic5.png">
+![](pics/pic5.png)
 
 The modules within a process may not be arranged in a contiguous memory layout, as demonstrated by the dashed area in the figure. This is a result of their dynamic nature; a module can be loaded and unloaded multiple times during the lifecycle of a process.
 
 In this particular example, the three modules **A**, **B** and **C** could have been loaded in such a way that they are arranged sequentially in the memory. At a specific time **t<sub>0</sub>** we captured a *Call Stack* that includes an absolute address corresponding to the green mark in the diagram **<sub>(1)</sub>**. We will refer to this address as **X**, and we know that it belongs to the module **B**.
 
-<img align="left" src="pics/t0.png">
-<br clear="left"/>
+![](pics/t0.png)
 
 At a later time **t<sub>1</sub>**, the process unloads module **B** and then at **t<sub>2</sub>** loads module **D** in the same location.
 
-<img align="left" src="pics/t1.png">
-<br clear="left"/>
-
-<img align="left" src="pics/t2.png">
-<br clear="left"/>
+![](pics/t1.png)
+![](pics/t2.png)
 
 We then capture another Call Stack that includes the same **X** absolute address <sub>**(2)**</sub>. However, the new address no longer belongs to module **B**, but now belongs to module **D**.
 
 Lastly, at **t<sub>3</sub>**, the original **B** module is reloaded but at a different address. We capture yet another *Call Stack* **<sub>(3)</sub>**, but this time the address is no longer **X**.
 
-<img align="left" src="pics/t3.png">
-<br clear="left"/>
+![](pics/t3.png)
 
 The dynamic and temporal nature of modules highlights two crucial conclusions: (i) all of our events should be timed, and (ii) we must work with relative addresses rather than absolute addresses.
 
