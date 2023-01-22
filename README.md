@@ -28,21 +28,34 @@ From a technical standpoint, interpreting the Call Stack externally is more comp
 
 ## How a process is organised
 
-When we capture a snapshot of the call stack, we are left with a series of memory addresses that point to different parts of our program code. In order to understand what these addresses correspond to, we need to understand how a process is organized in memory.
+When we capture a snapshot of the call stack, we are left with a series of memory addresses that point to different parts of our program code. In order to find out which source files each of the addresses correspond to, we need to understand how a process is organized in memory.
 
-A process is made up of several modules, which are also known as shared libraries or dynamic-link libraries. These modules contain code and data that are used by the process, and are mapped into the process's virtual memory space at a specific range. In Windows modules are typically represented by *.exe* or *.dll* files. Every memory address in our call stack belongs to one of these memory ranges.
+A process is made up of several modules, which are also known as shared libraries or dynamic-link libraries. These modules contain code and data, and are mapped into the process's virtual memory space at a specific range. In Windows modules are typically represented by *.exe* or *.dll* files. Every memory address in our call stack belongs to one of these memory ranges.
 
-For example, imagine a process with four modules: **A**, **B**, **C**, and **D**. In the picture below, we show the process memory space range and each module as a white box.
+For example, imagine a situation where a process has 4 modules loaded: **A**, **B**, **C**, and **D**. In the picture below, we show the process memory space range and each module as a white box. 
 
 <img align="left" src="pics/pic5.png">
 
-<img align="right" src="pics/timeline.png">
+The modules within a process may not be arranged in a contiguous memory layout, as demonstrated by the dashed area in the figure. This is a result of their dynamic nature; a module can be loaded and unloaded multiple times during the lifecycle of a process.
 
-The modules within a process may not be arranged in sequential memory locations, as indicated by the gaps between modules in the diagram. This is due to the dynamic nature of the modules; for instance, a module like **B** can be unloaded and replaced with another module **B'** that partially overlaps the same memory range. What is more, module **B** could be loaded and unloaded multiple times and there is no guarantee that it will be loaded at the same memory addresses.
+In this particular example, the three modules **A**, **B** and **C** could have been loaded in such a way that they are arranged sequentially in the memory. At a specific time **t<sub>0</sub>** we captured a *Call Stack* that includes an absolute address corresponding to the green mark in the diagram **<sub>(1)</sub>**. We will refer to this address as **X**, and we know that it belongs to the module **B**.
 
-This highlights the fact that we cannot rely on absolute addresses and must instead use relative addresses and timing when tracking events.
+<img align="left" src="pics/t0.png">
 
-<br clear="right"/>
+At a later time **t<sub>1</sub>**, the process unloads module **B** and then at **t<sub>2</sub>** loads module **D** in the same location.
+
+<img align="left" src="pics/t1.png">
+
+<img align="left" src="pics/t2.png">
+
+We then capture another *Call Stack* that includes the same **X** absolute address <sub>**(2)**</sub>. Only that the new address does not belong to module **B**. It now belongs to module **D**. 
+
+Finally, at **t<sub>3</sub>** the old **B** module is loaded again but now in a different address. We then capture another *Call Stack* **<sub>(3)</sub>**, however, the address is no longer **X**.
+
+<img align="left" src="pics/t3.png">
+
+The dynamic and temporal nature of modules highlights two crucial conclusions: (i) all of our events should be timed, and (ii) we must work with relative addresses rather than absolute addresses.
+
 
 ## The "legacy" way
 
