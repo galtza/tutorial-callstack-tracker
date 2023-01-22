@@ -323,7 +323,7 @@ Once the solution has been generated and opened in Visual Studio, the first step
 
 A possible output of the *viewer* could be:
 
-```tex
+```terminal
 04/08/18 20:05:44: {
     "foo.dll"! C:\Users\555\repos\tutorial-callstack-tracker\src\foo\foo测试.cpp(56): foo_func_2
     "foo.dll"! C:\Users\555\repos\tutorial-callstack-tracker\src\foo\foo测试.cpp(61): foo_func_1
