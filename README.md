@@ -41,18 +41,22 @@ The modules within a process may not be arranged in a contiguous memory layout, 
 In this particular example, the three modules **A**, **B** and **C** could have been loaded in such a way that they are arranged sequentially in the memory. At a specific time **t<sub>0</sub>** we captured a *Call Stack* that includes an absolute address corresponding to the green mark in the diagram **<sub>(1)</sub>**. We will refer to this address as **X**, and we know that it belongs to the module **B**.
 
 <img align="left" src="pics/t0.png">
+<br clear="left"/>
 
 At a later time **t<sub>1</sub>**, the process unloads module **B** and then at **t<sub>2</sub>** loads module **D** in the same location.
 
 <img align="left" src="pics/t1.png">
+<br clear="left"/>
 
 <img align="left" src="pics/t2.png">
+<br clear="left"/>
 
 We then capture another *Call Stack* that includes the same **X** absolute address <sub>**(2)**</sub>. Only that the new address does not belong to module **B**. It now belongs to module **D**. 
 
 Finally, at **t<sub>3</sub>** the old **B** module is loaded again but now in a different address. We then capture another *Call Stack* **<sub>(3)</sub>**, however, the address is no longer **X**.
 
 <img align="left" src="pics/t3.png">
+<br clear="left"/>
 
 The dynamic and temporal nature of modules highlights two crucial conclusions: (i) all of our events should be timed, and (ii) we must work with relative addresses rather than absolute addresses.
 
