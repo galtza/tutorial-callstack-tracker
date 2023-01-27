@@ -1,3 +1,27 @@
+﻿/*
+    MIT License
+
+    Copyright (c) 2017-2023 Raúl Ramos
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sub-license, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE.
+*/
+
 // Own
 
 #include "uuid.h"
@@ -26,31 +50,22 @@
 #    error "Unknown compiler"
 #endif
 
-auto qcstudio::misc::uuid::get_seed() -> uint64_t {
-    using namespace std::chrono;
-    const auto pid =
-#if defined(_WIN32)
-        GetCurrentProcessId()
-#elif defined(__APPLE__) || defined(__linux__) || defined(__unix__)
-        getpid()
-#else
-        -1
-#endif
-        ;
-    const auto time = duration_cast<nanoseconds>(system_clock::now().time_since_epoch()).count();
-    return llabs(((time * 181) * ((pid - 83) * 359)) % 104729);
+namespace {
+    auto get_seed() -> uint64_t;
 }
 
 qcstudio::misc::uuid::uuid() {
     // get low and set the variant to RFC 4122.
 
-    low_ = generator_();
+    thread_local auto generator = std::independent_bits_engine<std::default_random_engine, 8 * CHAR_BIT, uint64_t>(get_seed());
+
+    low_ = generator();
     low_ &= 0x3fffffffffffffff;
     low_ |= 0x8000000000000000;
 
     // get hight and set the version number to 4
 
-    high_ = generator_();
+    high_ = generator();
     high_ &= 0xffffffffffff0fff;
     high_ |= 0x4000;
 }
@@ -77,3 +92,25 @@ auto qcstudio::misc::uuid::str() const -> std::string {
     out(5, 0, low_, false);
     return ss.str();
 }
+
+/*
+    Local functions
+*/
+
+namespace {
+
+    auto get_seed() -> uint64_t {
+        using namespace std::chrono;
+        const auto pid =
+#if defined(_WIN32)
+            GetCurrentProcessId()
+#elif defined(__APPLE__) || defined(__linux__) || defined(__unix__)
+            getpid()
+#else
+            -1
+#endif
+            ;
+        const auto time = duration_cast<nanoseconds>(system_clock::now().time_since_epoch()).count();
+        return llabs(((time * 181) * ((pid - 83) * 359)) % 104729);
+    }
+}  // namespace
