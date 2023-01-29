@@ -46,7 +46,7 @@ At a later time, **t<sub>1</sub>**, the process unloads module **B** and at **t<
 
 Lastly, at **t<sub>3</sub>**, the original **B** module is reloaded, but at a different address this time. Again, we capture yet another call stack, and we find an arbitrary address **Y**. At this time, **Y** corresponds to the module **B**.
 
-Notice that **X** had different associated modules at **t<sub>0</sub>** and at **t<sub>2</sub>** (It did not have even an associated module at **t<sub>1</sub>**). The same logic can be applied to the address **Y**.
+It is worth noting that **X** had different associated modules during the time periods **t<sub>0</sub>**-**t<sub>1</sub>** and **t<sub>2</sub>**-**t<sub>3</sub>**, with no associated module present during the period **t<sub>1</sub>**-**t<sub>2</sub>**. The same concept applies to the address **Y**.
 
 To summarize, the dynamic and temporal nature of modules highlights two crucial conclusions:
 
